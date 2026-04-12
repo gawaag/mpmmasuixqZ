@@ -12,8 +12,9 @@ hyperysco.db
 # Cache OSM
 cache/
 
-# DXF temporaires
+# DXF temporaires (sauf maquette_base.dxf qui est nécessaire)
 *.dxf
+!maquette_base.dxf
 
 # Environnement
 .env

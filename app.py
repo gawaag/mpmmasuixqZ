@@ -58,6 +58,17 @@ def init_db():
                 exports_count INTEGER DEFAULT 0
             )
         ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS exports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                filename TEXT,
+                location TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
         
         # Utilisateurs par défaut
         users = [
