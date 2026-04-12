@@ -1275,8 +1275,12 @@
                 });
                 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Erreur serveur');
+                    let errorMsg = `Erreur serveur (${response.status})`;
+                    try {
+                        const error = await response.json();
+                        errorMsg = error.error || errorMsg;
+                    } catch {}
+                    throw new Error(errorMsg);
                 }
                 
                 // Télécharger le fichier
