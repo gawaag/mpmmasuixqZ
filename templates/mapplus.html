@@ -1,0 +1,3110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperysco-Map Plus - Export avec Maquette</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            height: 100vh;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        /* Sidebar - Plus large pour le cartouche */
+        .sidebar {
+            width: 480px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #334155;
+            overflow: hidden;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .badge-pro {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            color: #94a3b8;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover {
+            border-color: #475569;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #f59e0b20, #ef444420);
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .section {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #334155;
+        }
+        
+        .section h3 {
+            margin-bottom: 12px;
+            color: #f59e0b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Form inputs */
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+        
+        /* Preview Cartouche */
+        .cartouche-preview {
+            background: #0f172a;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .cartouche-header {
+            text-align: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .cartouche-header .title1 {
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .cartouche-header .title2 {
+            color: #f59e0b;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        
+        .cartouche-header .title3 {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+        
+        .cartouche-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            font-size: 11px;
+        }
+        
+        .cartouche-body .label {
+            color: #64748b;
+        }
+        
+        .cartouche-body .value {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+        
+        /* Search */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        
+        .search-input:focus {
+            border-color: #f59e0b;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+        }
+        
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-suggestions.visible {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .suggestion-item:hover {
+            background: #334155;
+        }
+        
+        .suggestion-name {
+            color: #e2e8f0;
+            font-size: 13px;
+        }
+        
+        .suggestion-detail {
+            color: #64748b;
+            font-size: 11px;
+        }
+        
+        /* Star marker for search */
+        .search-star-icon {
+            font-size: 24px;
+            color: #fbbf24;
+            text-shadow: 0 0 8px #fbbf24, 0 0 16px #f59e0b;
+            animation: starPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes starPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+        
+        /* Grid options */
+        .grid-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .grid-option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .grid-option-group label {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        .grid-option-group select,
+        .grid-option-group input {
+            padding: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+        }
+        .grid-preview-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .star-marker-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e293b;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Layers Grid */
+        .layers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .layer-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .layer-item:hover {
+            border-color: #475569;
+        }
+        
+        .layer-item.selected {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .layer-item input {
+            display: none;
+        }
+        
+        .layer-check {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #475569;
+            border-radius: 4px;
+        }
+        
+        .layer-item.selected .layer-check {
+            background: #f59e0b;
+            border-color: #f59e0b;
+        }
+        
+        .layer-item.selected .layer-check::after {
+            content: '✓';
+            color: #0f172a;
+            font-size: 11px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        /* Zone Info */
+        .zone-info {
+            display: none;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .zone-info.visible {
+            display: block;
+        }
+        
+        .zone-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 8px;
+        }
+        
+        .zone-stat {
+            text-align: center;
+        }
+        
+        .zone-stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f59e0b;
+        }
+        
+        .zone-stat-label {
+            font-size: 10px;
+            color: #64748b;
+        }
+        
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+        
+        .btn-link {
+            background: transparent;
+            color: #94a3b8;
+            padding: 8px;
+        }
+        
+        .btn-link:hover {
+            color: #e2e8f0;
+        }
+        
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            font-size: 14px;
+            z-index: 500;
+        }
+        
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-overlay.visible {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #334155;
+            border-top-color: #f59e0b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #f59e0b;
+        }
+        
+        .loading-sub {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 24px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-size: 14px;
+            z-index: 2001;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .toast.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-color: #22c55e;
+        }
+        
+        .toast.error {
+            border-color: #ef4444;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        
+        /* Info box */
+        .info-box {
+            background: linear-gradient(135deg, #22c55e20, #06b6d420);
+            border: 1px solid #22c55e40;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        .info-box strong {
+            color: #22c55e;
+        }
+        
+        /* Points de relevé */
+        .releve-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .releve-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        .releve-toggle:hover {
+            border-color: #f59e0b;
+        }
+        
+        .releve-toggle.active {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            border-color: transparent;
+            color: #fff;
+        }
+        
+        .releve-toggle .dot {
+            width: 8px;
+            height: 8px;
+            background: #64748b;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        .releve-toggle.active .dot {
+            background: #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        
+        .releve-list {
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .releve-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            font-size: 11px;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .releve-coords {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .releve-coords .lambert {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        .releve-coords .gps {
+            color: #64748b;
+            font-size: 10px;
+        }
+        
+        .releve-delete {
+            width: 24px;
+            height: 24px;
+            background: #334155;
+            border: none;
+            border-radius: 6px;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .releve-distance {
+            background: linear-gradient(135deg, #f59e0b20, #ef444420);
+            border: 1px solid #f59e0b40;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+        }
+
+        .releve-distance-header {
+            font-size: 11px;
+            color: #f59e0b;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .releve-distance-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'Consolas', monospace;
+        }
+
+        .releve-distance-detail {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .distance-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid #33415540;
+        }
+
+        .distance-line:last-child {
+            border-bottom: none;
+        }
+
+        .distance-label {
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .distance-val {
+            color: #f59e0b;
+            font-weight: 600;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .releve-delete:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+        
+        .releve-empty {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        .releve-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .releve-btn {
+            flex: 1;
+            padding: 8px;
+            background: #334155;
+            border: none;
+            border-radius: 6px;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .releve-btn:hover {
+            background: #475569;
+            color: #e2e8f0;
+        }
+        
+        .releve-btn.danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+        
+        /* ===== REPÈRES GPS MULTIPLES ===== */
+        .reperes-section {
+            background: linear-gradient(135deg, #f59e0b10, #fbbf2410);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        
+        .reperes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .reperes-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fbbf24;
+        }
+        
+        .reperes-count {
+            background: #f59e0b;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        
+        .repere-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .repere-input {
+            width: 100%;
+            padding: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+        }
+        
+        .repere-input:focus {
+            border-color: #f59e0b;
+            outline: none;
+        }
+        
+        .repere-input.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .repere-actions-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .repere-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .repere-btn.primary {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .repere-btn.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        .repere-btn.secondary {
+            background: #334155;
+            color: #94a3b8;
+        }
+        
+        .repere-btn.secondary:hover {
+            background: #475569;
+            color: #e2e8f0;
+        }
+        
+        .reperes-list {
+            max-height: 180px;
+            overflow-y: auto;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .repere-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        
+        .repere-item-info {
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .repere-item-name {
+            color: #fbbf24;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .repere-item-coords {
+            color: #64748b;
+            font-size: 10px;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .repere-item-delete {
+            width: 24px;
+            height: 24px;
+            background: #334155;
+            border: none;
+            border-radius: 4px;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 8px;
+        }
+        
+        .repere-item-delete:hover {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .reperes-empty {
+            text-align: center;
+            padding: 15px;
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        /* Import Excel */
+        .excel-import-zone {
+            border: 2px dashed #334155;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        
+        .excel-import-zone:hover {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .excel-import-zone.dragover {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.2);
+        }
+        
+        .excel-import-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        .excel-import-text {
+            font-size: 11px;
+            color: #64748b;
+        }
+        
+        /* Vérification */
+        .verification-box {
+            background: linear-gradient(135deg, #3b82f620, #06b6d420);
+            border: 1px solid #3b82f640;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .verification-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        
+        .verification-result.success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #22c55e;
+        }
+        
+        .verification-result.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+        
+        .verification-result.warning {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: #f59e0b;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                Hyperysco-Map<span class="badge-pro">PLUS</span>
+            </div>
+            <div class="subtitle">Export DXF avec Maquette - Prêt pour AutoCAD</div>
+        </div>
+        
+        <div class="sidebar-content">
+            <!-- Tabs -->
+            <div class="tabs">
+                <div class="tab active" data-tab="cartouche">📋 Cartouche</div>
+                <div class="tab" data-tab="carte">🗺️ Carte</div>
+                <div class="tab" data-tab="export">📤 Export</div>
+            </div>
+            
+            <!-- Tab: Cartouche -->
+            <div class="tab-content active" id="tab-cartouche">
+                <div class="info-box">
+                    <strong>💡 Maquette Professionnelle</strong><br>
+                    Les informations ci-dessous seront intégrées au DXF. Le fichier sera prêt à utiliser dans AutoCAD <strong>sans recalage Covadis</strong>.
+                </div>
+                
+                <div class="section">
+                    <h3>🏢 En-tête</h3>
+                    <div class="form-group">
+                        <label>Organisme / Entreprise</label>
+                        <input type="text" id="cartOrganisme" value="ROYAUME DU MAROC - MAROC TELECOM" placeholder="Ex: ROYAUME DU MAROC">
+                    </div>
+                    <div class="form-group">
+                        <label>Direction</label>
+                        <input type="text" id="cartDirection" value="DIRECTION REGIONALE DE FES" placeholder="Ex: DIRECTION REGIONALE DE ...">
+                    </div>
+                    <div class="form-group">
+                        <label>Description des travaux</label>
+                        <textarea id="cartTravaux" placeholder="Description complète des travaux">TRAVAUX DE GÉNIE CIVIL ET POSE DE CABLE FIBRE OPTIQUE AUX RÉSEAUX DES TÉLÉCOMMUNICATIONS</textarea>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>📐 Détails du Plan</h3>
+                    <div class="form-group">
+                        <label>Type de Plan</label>
+                        <select id="cartTypePlan">
+                            <option value="PLAN DE RECOLLEMENT">PLAN DE RECOLLEMENT</option>
+                            <option value="PLAN D'EXECUTION">PLAN D'EXECUTION</option>
+                            <option value="PLAN DE SITUATION">PLAN DE SITUATION</option>
+                            <option value="PLAN TOPOGRAPHIQUE">PLAN TOPOGRAPHIQUE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tronçon / Zone</label>
+                        <input type="text" id="cartTroncon" placeholder="Ex: TRONCON A1">
+                    </div>
+                    <div class="form-group">
+                        <label>Description GC</label>
+                        <input type="text" id="cartGC" value="GC : Reamenagement quartier" placeholder="Ex: GC : Reamenagement quartier ALGHAZOUANI">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>N° Plan</label>
+                            <input type="text" id="cartNumPlan" value="1/1" placeholder="1/1">
+                        </div>
+                        <div class="form-group">
+                            <label>Échelle</label>
+                            <select id="cartEchelle">
+                                <option value="1/500">1/500</option>
+                                <option value="1/1000">1/1000</option>
+                                <option value="1/2000" selected>1/2000</option>
+                                <option value="1/5000">1/5000</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>🏗️ Société</h3>
+                    <div class="form-group">
+                        <label>Nom de la Société</label>
+                        <input type="text" id="cartSociete" value="SOHATECO" placeholder="Nom de votre société">
+                    </div>
+                    <div class="form-group">
+                        <label>Adresse</label>
+                        <input type="text" id="cartAdresse" placeholder="Adresse complète">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Téléphone</label>
+                            <input type="text" id="cartTel" placeholder="Tél">
+                        </div>
+                        <div class="form-group">
+                            <label>Fax</label>
+                            <input type="text" id="cartFax" placeholder="Fax">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>📝 Informations</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Levé et Dessiné par</label>
+                            <input type="text" id="cartLeve" value="SOHATECO" placeholder="Qui a réalisé">
+                        </div>
+                        <div class="form-group">
+                            <label>Vérifié par</label>
+                            <input type="text" id="cartVerifie" value="SOHATECO" placeholder="Vérifié par">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="text" id="cartDate" placeholder="Ex: OCTOBRE 2025">
+                        </div>
+                        <div class="form-group">
+                            <label>N° Contrat</label>
+                            <input type="text" id="cartContrat" placeholder="N° du contrat">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>C.M.O</label>
+                            <input type="text" id="cartCMO" placeholder="Ex: C.M.O FES">
+                        </div>
+                        <div class="form-group">
+                            <label>D.C</label>
+                            <input type="text" id="cartDC" placeholder="Ex: D C KHENIFRA">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Carte -->
+            <div class="tab-content" id="tab-carte">
+                <div class="section">
+                    <h3>🔍 Recherche</h3>
+                    <div class="search-container">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Rechercher une adresse...">
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>📁 Couches à exporter</h3>
+                    <div class="layers-grid">
+                        <div class="layer-item selected" data-layer="roads">
+                            <span class="layer-check"></span>
+                            <input type="checkbox" checked>
+                            🛣️ Routes
+                        </div>
+                        <div class="layer-item" data-layer="buildings">
+                            <span class="layer-check"></span>
+                            <input type="checkbox">
+                            🏢 Bâtiments
+                        </div>
+                        <div class="layer-item" data-layer="contours">
+                            <span class="layer-check"></span>
+                            <input type="checkbox">
+                            📏 Contours
+                        </div>
+                        <div class="layer-item" data-layer="water">
+                            <span class="layer-check"></span>
+                            <input type="checkbox">
+                            💧 Eau
+                        </div>
+                        <div class="layer-item" data-layer="places">
+                            <span class="layer-check"></span>
+                            <input type="checkbox">
+                            🏘️ Quartiers
+                        </div>
+                    </div>
+                    
+                    <!-- Option noms de rues -->
+                    <div style="margin-top: 12px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
+                            <input type="checkbox" id="showRoadLabels" checked style="width: 18px; height: 18px; accent-color: #3b82f6;">
+                            🏷️ Afficher les noms de rues/avenues
+                        </label>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; margin-left: 26px;">
+                            Désactiver pour un plan plus lisible
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Options Grille Lambert (Croix de recalage) -->
+                <div class="section">
+                    <h3 style="color: #8b5cf6;">➕ Grille de Recalage Lambert</h3>
+                    
+                    <!-- Mode de grille -->
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 11px; color: #94a3b8;">🎯 Mode de placement</label>
+                        <select id="gridMode" style="width: 100%; margin-top: 4px; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 12px;">
+                            <option value="full" selected>Grille complète (toute la zone)</option>
+                            <option value="extremities">Extrémités seulement (coins + bords)</option>
+                            <option value="corners">4 coins uniquement</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid-options">
+                        <div class="grid-option-group">
+                            <label>📏 Espacement graduations</label>
+                            <select id="gridSpacing">
+                                <option value="auto" selected>Automatique</option>
+                                <option value="25">25 m</option>
+                                <option value="50">50 m</option>
+                                <option value="100">100 m</option>
+                                <option value="200">200 m</option>
+                                <option value="500">500 m</option>
+                                <option value="1000">1 km</option>
+                            </select>
+                        </div>
+                        <div class="grid-option-group">
+                            <label>↕️ Offset vertical (m)</label>
+                            <input type="number" id="gridOffset" value="0" min="-1000" max="1000" step="10" placeholder="0">
+                        </div>
+                    </div>
+                    
+                    <div class="grid-preview-toggle">
+                        <input type="checkbox" id="showGridPreview" checked style="width: 16px; height: 16px; accent-color: #8b5cf6;">
+                        <label for="showGridPreview" style="cursor: pointer; color: #c4b5fd;">
+                            👁️ Prévisualiser les croix sur la carte
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
+                        Les croix Lambert sont en <span style="color: #8b5cf6; font-weight: 600;">violet</span> (calque identifiable dans AutoCAD)
+                    </div>
+                    
+                    <!-- ===== SECTION TRONÇONS CÂBLES ===== -->
+                    <div class="reperes-section">
+                        <div class="reperes-header">
+                            <span class="reperes-title">📡 Tronçons Câbles</span>
+                            <span class="reperes-count" id="tronconsCount">0</span>
+                        </div>
+                        
+                        <!-- Mode de saisie -->
+                        <div style="margin-bottom: 10px;">
+                            <label style="font-size: 10px; color: #94a3b8; display: block; margin-bottom: 4px;">Mode de saisie</label>
+                            <select id="tronconMode" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 12px;">
+                                <option value="excel">📊 Import fichier Excel</option>
+                                <option value="manual">✏️ Saisie manuelle (2 points)</option>
+                                <option value="draw">🖌️ Dessin libre à la main</option>
+                                <option value="points">📍 Tracé point par point</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Mode Excel -->
+                        <div id="modeExcel">
+                            <div style="margin-bottom: 10px; padding: 8px; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; border-radius: 6px;">
+                                <div style="font-size: 11px; color: #22c55e; font-weight: 600; margin-bottom: 4px;">📊 Format Excel requis:</div>
+                                <div style="font-size: 10px; color: #94a3b8; line-height: 1.5;">
+                                    • <b>Ligne 1 (Début):</b> Coord GPS (ex: 35.171088,-3.155651)<br>
+                                    • <b>Ligne 2 (Arrivée):</b> Coord GPS d'arrivée<br>
+                                    • <b>Ligne 3 (Description):</b> Description du câble<br>
+                                    • <b>Ligne 4 (ML):</b> Distance en mètres
+                                </div>
+                            </div>
+                            
+                            <div class="excel-import-zone" id="excelImportZone">
+                                <div class="excel-import-icon">📊</div>
+                                <div class="excel-import-text">
+                                    Glisser fichier Excel ou <span style="color: #22c55e; text-decoration: underline;">cliquer pour importer</span>
+                                </div>
+                                <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+                            </div>
+                        </div>
+                        
+                        <!-- Mode Saisie Manuelle -->
+                        <div id="modeManual" style="display: none;">
+                            <div style="padding: 10px; background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 6px; margin-bottom: 10px;">
+                                <div style="font-size: 11px; color: #3b82f6; font-weight: 600; margin-bottom: 8px;">✏️ Saisie manuelle d'un tronçon</div>
+                                
+                                <div style="margin-bottom: 8px;">
+                                    <label style="font-size: 10px; color: #94a3b8;">Point DÉBUT (GPS)</label>
+                                    <div style="display: flex; gap: 4px; margin-top: 2px;">
+                                        <input type="text" id="manualDebutLat" placeholder="Latitude" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                        <input type="text" id="manualDebutLon" placeholder="Longitude" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-bottom: 8px;">
+                                    <label style="font-size: 10px; color: #94a3b8;">Point ARRIVÉE (GPS)</label>
+                                    <div style="display: flex; gap: 4px; margin-top: 2px;">
+                                        <input type="text" id="manualArriveeLat" placeholder="Latitude" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                        <input type="text" id="manualArriveeLon" placeholder="Longitude" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                                    <input type="text" id="manualDesc" placeholder="Description" style="flex: 2; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    <input type="number" id="manualML" placeholder="ML (m)" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                </div>
+                                
+                                <button id="addManualTroncon" class="repere-btn primary" style="width: 100%;">➕ Ajouter ce tronçon</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Mode Dessin Libre -->
+                        <div id="modeDraw" style="display: none;">
+                            <div style="padding: 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid #a855f7; border-radius: 6px; margin-bottom: 10px;">
+                                <div style="font-size: 11px; color: #a855f7; font-weight: 600; margin-bottom: 8px;">🖌️ Dessin libre sur la carte</div>
+                                <p style="font-size: 10px; color: #94a3b8; margin-bottom: 8px;">
+                                    Dessinez votre itinéraire à main levée directement sur la carte. Le tracé sera lissé automatiquement.
+                                </p>
+                                <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                                    <input type="text" id="drawDesc" placeholder="Description du tracé" style="flex: 2; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    <input type="number" id="drawML" placeholder="ML (m)" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                </div>
+                                <button id="startDrawMode" class="repere-btn primary" style="width: 100%;">
+                                    🖌️ Commencer à dessiner
+                                </button>
+                                <button id="finishDrawMode" class="repere-btn secondary" style="width: 100%; margin-top: 4px; display: none;">
+                                    ✅ Terminer le tracé
+                                </button>
+                                <button id="cancelDrawMode" class="repere-btn secondary" style="width: 100%; margin-top: 4px; display: none;">
+                                    ❌ Annuler
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Mode Points -->
+                        <div id="modePoints" style="display: none;">
+                            <div style="padding: 10px; background: rgba(234, 179, 8, 0.1); border: 1px solid #eab308; border-radius: 6px; margin-bottom: 10px;">
+                                <div style="font-size: 11px; color: #eab308; font-weight: 600; margin-bottom: 8px;">📍 Tracé point par point</div>
+                                <p style="font-size: 10px; color: #94a3b8; margin-bottom: 8px;">
+                                    Cliquez sur la carte pour placer les points de votre itinéraire. Les points seront reliés dans l'ordre.
+                                </p>
+                                <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                                    <input type="text" id="pointsDesc" placeholder="Description" style="flex: 2; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    <input type="number" id="pointsML" placeholder="ML (m)" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                </div>
+                                <div id="pointsStatus" style="font-size: 10px; color: #64748b; margin-bottom: 8px; padding: 4px; background: #0f172a; border-radius: 4px;">
+                                    Points: <span id="pointsCounter">0</span> | Cliquez pour ajouter
+                                </div>
+                                <button id="startPointsMode" class="repere-btn primary" style="width: 100%;">
+                                    📍 Commencer le tracé
+                                </button>
+                                <button id="finishPointsMode" class="repere-btn secondary" style="width: 100%; margin-top: 4px; display: none;">
+                                    ✅ Valider le tracé (<span id="pointsTotal">0</span> pts)
+                                </button>
+                                <button id="undoLastPoint" class="repere-btn secondary" style="width: 100%; margin-top: 4px; display: none;">
+                                    ↩️ Annuler dernier point
+                                </button>
+                                <button id="cancelPointsMode" class="repere-btn secondary" style="width: 100%; margin-top: 4px; display: none;">
+                                    ❌ Annuler tout
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Liste des tronçons -->
+                        <div class="reperes-list" id="tronconsList" style="max-height: 200px;">
+                            <div class="reperes-empty">Aucun tronçon importé</div>
+                        </div>
+                        
+                        <!-- Légende couleurs -->
+                        <div id="tronconsLegend" style="display: none; margin-top: 8px; padding: 8px; background: #0f172a; border-radius: 6px; max-height: 100px; overflow-y: auto;">
+                            <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">🎨 Légende couleurs:</div>
+                            <div id="tronconsLegendList" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="repere-actions-row">
+                            <button class="repere-btn secondary" id="clearAllTroncons">🗑️ Tout effacer</button>
+                            <button class="repere-btn secondary" id="zoomToTroncons">🔍 Zoom tronçons</button>
+                        </div>
+                        
+                        <!-- Vérification -->
+                        <div class="verification-box">
+                            <button class="repere-btn primary" id="verifyDataBtn" style="width: 100%;">
+                                ✅ Vérifier les données avant export
+                            </button>
+                            <div id="verificationResults"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Points de Relevé Lambert -->
+                <div class="section">
+                    <h3>📍 Points de Relevé Lambert</h3>
+                    <div class="releve-header">
+                        <span style="font-size: 12px; color: #64748b;">Cliquez sur la carte</span>
+                        <button class="releve-toggle" id="releveToggle">
+                            <span class="dot"></span>
+                            Mode actif
+                        </button>
+                    </div>
+                    <div class="releve-list" id="releveList">
+                        <div class="releve-empty">
+                            Activez le mode et cliquez sur la carte pour ajouter des points de calage
+                        </div>
+                    </div>
+                    <div id="releveDistance" class="releve-distance" style="display: none;">
+                        <div class="releve-distance-header">📏 Distance</div>
+                        <div id="releveDistanceContent"></div>
+                    </div>
+                    <div class="releve-actions">
+                        <button class="releve-btn" id="releveExport" title="Copier les coordonnées">
+                            📋 Copier
+                        </button>
+                        <button class="releve-btn danger" id="releveClear">
+                            🗑️ Effacer tout
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="zone-info" id="zoneInfo">
+                    <strong>📐 Zone sélectionnée</strong>
+                    <div class="zone-stats">
+                        <div class="zone-stat">
+                            <div class="zone-stat-value" id="zoneArea">-</div>
+                            <div class="zone-stat-label">km²</div>
+                        </div>
+                        <div class="zone-stat">
+                            <div class="zone-stat-value" id="zoneLambertX">-</div>
+                            <div class="zone-stat-label">X Lambert</div>
+                        </div>
+                        <div class="zone-stat">
+                            <div class="zone-stat-value" id="zoneLambertY">-</div>
+                            <div class="zone-stat-label">Y Lambert</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-secondary" id="clearBtn">
+                    🗑️ Effacer la sélection
+                </button>
+            </div>
+            
+            <!-- Tab: Export -->
+            <div class="tab-content" id="tab-export">
+                <div class="info-box">
+                    <strong>⚡ Export Intelligent</strong><br>
+                    Le DXF sera généré directement en <strong>coordonnées Lambert Zone I Maroc</strong> avec la maquette intégrée. Ouvrez directement dans AutoCAD !
+                </div>
+                
+                <div class="section">
+                    <h3>📋 Aperçu Cartouche</h3>
+                    <div class="cartouche-preview">
+                        <div class="cartouche-header">
+                            <div class="title1" id="previewOrganisme">ROYAUME DU MAROC - MAROC TELECOM</div>
+                            <div class="title2" id="previewDirection">DIRECTION REGIONALE DE FES</div>
+                            <div class="title3" id="previewTravaux">TRAVAUX DE GÉNIE CIVIL...</div>
+                        </div>
+                        <div class="cartouche-body">
+                            <div><span class="label">Type:</span> <span class="value" id="previewType">PLAN DE RECOLLEMENT</span></div>
+                            <div><span class="label">Échelle:</span> <span class="value" id="previewEchelle">1/2000</span></div>
+                            <div><span class="label">Date:</span> <span class="value" id="previewDate">-</span></div>
+                            <div><span class="label">Société:</span> <span class="value" id="previewSociete">SOHATECO</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>⚙️ Options</h3>
+                    <div class="form-group">
+                        <label>Intervalle courbes de niveau</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" id="contourInterval" value="10" min="1" max="100" style="width: 80px;">
+                            <span style="color: #64748b; font-size: 12px;">mètres</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" id="downloadBtn" disabled>
+                    ⬇️ Télécharger DXF avec Maquette
+                </button>
+                
+                <a href="/app" class="btn btn-link">
+                    ← Retour à l'export standard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="map-container">
+        <div id="map"></div>
+        <div class="map-overlay">
+            ✏️ Dessinez un rectangle pour sélectionner la zone
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Génération du DXF...</div>
+        <div class="loading-sub" id="loadingSub">Création de la maquette professionnelle</div>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
+    <script>
+        // État de l'application
+        const state = {
+            layers: ['roads'],
+            bbox: null,
+            contourInterval: 10,
+            lambertCenter: { x: 0, y: 0 },
+            releveMode: false,
+            relevePoints: [],
+            searchMarker: null,  // Étoile de repérage
+            gridSpacing: 'auto', // Espacement graduations (auto, 50, 100, 200, 500)
+            gridOffset: 0,       // Offset vertical des croix
+            showGridPreview: true // Afficher prévisualisation des croix
+        };
+        
+        // Groupe pour les croix de prévisualisation
+        let gridPreviewGroup = null;
+        
+        // ============================================================
+        // PROJECTION LAMBERT MAROC ZONE I
+        // ============================================================
+        const LAMBERT_MAROC = {
+            a: 6378249.2,
+            b: 6356515.0,
+            lat0: 33.3 * Math.PI / 180,
+            lon0: -5.4 * Math.PI / 180,
+            k0: 0.999625769,
+            x0: 500000,
+            y0: 300000,
+            dx: 31,
+            dy: 146,
+            dz: 47
+        };
+        
+        const e2 = (LAMBERT_MAROC.a * LAMBERT_MAROC.a - LAMBERT_MAROC.b * LAMBERT_MAROC.b) / (LAMBERT_MAROC.a * LAMBERT_MAROC.a);
+        const e = Math.sqrt(e2);
+        
+        function wgs84ToLambertMaroc(lon, lat) {
+            const lonRad = lon * Math.PI / 180;
+            const latRad = lat * Math.PI / 180;
+            const n = Math.sin(LAMBERT_MAROC.lat0);
+            const F = (Math.cos(LAMBERT_MAROC.lat0) * Math.pow(1 + e * Math.sin(LAMBERT_MAROC.lat0), e/2)) / 
+                      (Math.sqrt(1 - e2 * Math.sin(LAMBERT_MAROC.lat0) * Math.sin(LAMBERT_MAROC.lat0)) * Math.pow(Math.tan(Math.PI/4 + LAMBERT_MAROC.lat0/2) * Math.pow((1 - e * Math.sin(LAMBERT_MAROC.lat0)) / (1 + e * Math.sin(LAMBERT_MAROC.lat0)), e/2), n));
+            const rho0 = LAMBERT_MAROC.a * F / Math.pow(Math.tan(Math.PI/4 + LAMBERT_MAROC.lat0/2) * Math.pow((1 - e * Math.sin(LAMBERT_MAROC.lat0)) / (1 + e * Math.sin(LAMBERT_MAROC.lat0)), e/2), n);
+            const t = Math.tan(Math.PI/4 + latRad/2) * Math.pow((1 - e * Math.sin(latRad)) / (1 + e * Math.sin(latRad)), e/2);
+            const rho = LAMBERT_MAROC.a * F / Math.pow(t, n);
+            const theta = n * (lonRad - LAMBERT_MAROC.lon0);
+            const x = LAMBERT_MAROC.x0 + LAMBERT_MAROC.k0 * rho * Math.sin(theta);
+            const y = LAMBERT_MAROC.y0 + LAMBERT_MAROC.k0 * (rho0 - rho * Math.cos(theta));
+            return { x: x, y: y };
+        }
+        
+        function calculateLambertDistance(p1, p2) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            return Math.sqrt(dx*dx + dy*dy);
+        }
+        
+        // Initialiser la carte
+        const map = L.map('map').setView([33.5, -5.0], 10);  // Centre Maroc
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        // Couche pour les dessins
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        // Contrôles de dessin
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                polygon: false,
+                circle: false,
+                marker: false,
+                circlemarker: false,
+                rectangle: {
+                    shapeOptions: {
+                        color: '#f59e0b',
+                        weight: 3,
+                        fillOpacity: 0.15,
+                        fillColor: '#f59e0b'
+                    }
+                }
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+        
+        // ============================================================
+        // TRONÇONS CÂBLES (LIGNES DÉBUT-ARRIVÉE)
+        // ============================================================
+        
+        // Stockage des tronçons
+        state.troncons = [];
+        let tronconsLayerGroup = L.layerGroup().addTo(map);
+        let tronconIdCounter = 0;
+        
+        // Couleurs pour les tronçons (alternées)
+        const TRONCON_COLORS = [
+            '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', 
+            '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e',
+            '#84cc16', '#14b8a6', '#0ea5e9', '#6366f1', '#a855f7'
+        ];
+        
+        // Fonction pour convertir GPS en Lambert
+        async function convertToLambert(lat, lon) {
+            try {
+                const response = await fetch('/api/convert-lambert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lon: lon, lat: lat })
+                });
+                return await response.json();
+            } catch (err) {
+                console.error('Erreur conversion Lambert:', err);
+                return { x: 0, y: 0 };
+            }
+        }
+        
+        // Ajouter un tronçon
+        async function addTroncon(debutLat, debutLon, arriveeLat, arriveeLon, description, ml) {
+            const id = ++tronconIdCounter;
+            const color = TRONCON_COLORS[(id - 1) % TRONCON_COLORS.length];
+            
+            // Convertir en Lambert
+            const lambertDebut = await convertToLambert(debutLat, debutLon);
+            const lambertArrivee = await convertToLambert(arriveeLat, arriveeLon);
+            
+            const troncon = {
+                id,
+                debut: { lat: debutLat, lon: debutLon, x: lambertDebut.x, y: lambertDebut.y },
+                arrivee: { lat: arriveeLat, lon: arriveeLon, x: lambertArrivee.x, y: lambertArrivee.y },
+                description: description || `Tronçon ${id}`,
+                ml: ml || 0,
+                color
+            };
+            
+            state.troncons.push(troncon);
+            
+            // Dessiner la ligne sur la carte
+            const polyline = L.polyline([
+                [debutLat, debutLon],
+                [arriveeLat, arriveeLon]
+            ], {
+                color: color,
+                weight: 4,
+                opacity: 0.9
+            });
+            
+            polyline.tronconId = id;
+            
+            // Popup avec infos
+            const formatCoord = (val) => Math.round(val).toLocaleString('fr-FR');
+            polyline.bindPopup(`
+                <div style="min-width: 200px;">
+                    <strong style="color: ${color};">📍 ${troncon.description}</strong>
+                    <hr style="margin: 5px 0; border-color: ${color};">
+                    <div style="font-size: 11px;">
+                        <b>Distance ML:</b> ${ml} m<br>
+                        <b>Début GPS:</b> ${debutLat.toFixed(6)}, ${debutLon.toFixed(6)}<br>
+                        <b>Début Lambert:</b> X=${formatCoord(lambertDebut.x)}, Y=${formatCoord(lambertDebut.y)}<br>
+                        <b>Arrivée GPS:</b> ${arriveeLat.toFixed(6)}, ${arriveeLon.toFixed(6)}<br>
+                        <b>Arrivée Lambert:</b> X=${formatCoord(lambertArrivee.x)}, Y=${formatCoord(lambertArrivee.y)}
+                    </div>
+                </div>
+            `);
+            
+            tronconsLayerGroup.addLayer(polyline);
+            
+            // Ajouter marqueurs début et arrivée
+            const startMarker = L.circleMarker([debutLat, debutLon], {
+                radius: 6,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 1
+            });
+            startMarker.tronconId = id;
+            startMarker.bindTooltip('Début: ' + (ml ? ml + 'm' : ''), { permanent: false });
+            tronconsLayerGroup.addLayer(startMarker);
+            
+            const endMarker = L.circleMarker([arriveeLat, arriveeLon], {
+                radius: 6,
+                fillColor: '#fff',
+                color: color,
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 1
+            });
+            endMarker.tronconId = id;
+            endMarker.bindTooltip('Arrivée', { permanent: false });
+            tronconsLayerGroup.addLayer(endMarker);
+            
+            // Label ML au milieu de la ligne
+            if (ml) {
+                const midLat = (debutLat + arriveeLat) / 2;
+                const midLon = (debutLon + arriveeLon) / 2;
+                const label = L.marker([midLat, midLon], {
+                    icon: L.divIcon({
+                        html: `<div style="background: ${color}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap;">${ml}m</div>`,
+                        className: 'troncon-label',
+                        iconSize: [50, 20],
+                        iconAnchor: [25, 10]
+                    })
+                });
+                label.tronconId = id;
+                tronconsLayerGroup.addLayer(label);
+            }
+            
+            // ===== AJOUTER POINTS AUX RELEVÉS LAMBERT =====
+            // Point DÉBUT
+            const pointDebut = {
+                id: Date.now() + Math.random(),
+                lat: debutLat,
+                lon: debutLon,
+                x: lambertDebut.x,
+                y: lambertDebut.y,
+                name: `${ml}m-DEB`,
+                desc: description,
+                tronconId: id,
+                type: 'debut'
+            };
+            state.relevePoints.push(pointDebut);
+            
+            // Marqueur pour le point début dans releveMarkersGroup
+            const releveMarkerDebut = L.circleMarker([debutLat, debutLon], {
+                radius: 5,
+                fillColor: color,
+                color: '#fff',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(releveMarkersGroup);
+            releveMarkerDebut.bindTooltip(`${ml}m-DEB: X=${lambertDebut.x.toFixed(0)}, Y=${lambertDebut.y.toFixed(0)}`, { permanent: false, direction: 'top' });
+            releveMarkerDebut.pointId = pointDebut.id;
+            
+            // Point ARRIVÉE
+            const pointArrivee = {
+                id: Date.now() + Math.random() + 1,
+                lat: arriveeLat,
+                lon: arriveeLon,
+                x: lambertArrivee.x,
+                y: lambertArrivee.y,
+                name: `${ml}m-ARR`,
+                desc: description,
+                tronconId: id,
+                type: 'arrivee'
+            };
+            state.relevePoints.push(pointArrivee);
+            
+            // Marqueur pour le point arrivée dans releveMarkersGroup
+            const releveMarkerArrivee = L.circleMarker([arriveeLat, arriveeLon], {
+                radius: 5,
+                fillColor: '#fff',
+                color: color,
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(releveMarkersGroup);
+            releveMarkerArrivee.bindTooltip(`${ml}m-ARR: X=${lambertArrivee.x.toFixed(0)}, Y=${lambertArrivee.y.toFixed(0)}`, { permanent: false, direction: 'top' });
+            releveMarkerArrivee.pointId = pointArrivee.id;
+            
+            updateTronconsList();
+            updateReleveList();
+            updateReleveDistances();
+        }
+        
+        // Mettre à jour la liste des tronçons
+        function updateTronconsList() {
+            const list = document.getElementById('tronconsList');
+            const count = document.getElementById('tronconsCount');
+            const legend = document.getElementById('tronconsLegend');
+            const legendList = document.getElementById('tronconsLegendList');
+            
+            count.textContent = state.troncons.length;
+            
+            if (state.troncons.length === 0) {
+                list.innerHTML = '<div class="reperes-empty">Aucun tronçon importé</div>';
+                legend.style.display = 'none';
+                return;
+            }
+            
+            // Liste des tronçons
+            list.innerHTML = state.troncons.map(t => `
+                <div class="repere-item" style="border-left: 4px solid ${t.color};">
+                    <div class="repere-item-info">
+                        <div class="repere-item-name" style="color: ${t.color};">${t.description.substring(0, 40)}${t.description.length > 40 ? '...' : ''}</div>
+                        <div class="repere-item-coords">
+                            ML: ${t.ml}m | Début: ${t.debut.lat.toFixed(4)}, ${t.debut.lon.toFixed(4)}
+                        </div>
+                    </div>
+                    <button class="repere-item-delete" onclick="deleteTroncon(${t.id})">✖</button>
+                </div>
+            `).join('');
+            
+            // Légende
+            legend.style.display = 'block';
+            legendList.innerHTML = state.troncons.map(t => `
+                <div style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">
+                    <div style="width: 12px; height: 12px; background: ${t.color}; border-radius: 2px;"></div>
+                    <span style="font-size: 10px; color: #e2e8f0;">${t.ml}m</span>
+                </div>
+            `).join('');
+        }
+        
+        // Supprimer un tronçon
+        window.deleteTroncon = function(id) {
+            state.troncons = state.troncons.filter(t => t.id !== id);
+            
+            // Supprimer les layers associés du tronçon
+            const layersToRemove = [];
+            tronconsLayerGroup.eachLayer(layer => {
+                if (layer.tronconId === id) {
+                    layersToRemove.push(layer);
+                }
+            });
+            layersToRemove.forEach(l => tronconsLayerGroup.removeLayer(l));
+            
+            // Supprimer les points de relevé associés
+            const pointIds = state.relevePoints.filter(p => p.tronconId === id).map(p => p.id);
+            state.relevePoints = state.relevePoints.filter(p => p.tronconId !== id);
+            
+            // Supprimer les marqueurs de relevé
+            const releveLayersToRemove = [];
+            releveMarkersGroup.eachLayer(layer => {
+                if (pointIds.includes(layer.pointId)) {
+                    releveLayersToRemove.push(layer);
+                }
+            });
+            releveLayersToRemove.forEach(l => releveMarkersGroup.removeLayer(l));
+            
+            updateTronconsList();
+            updateReleveList();
+            updateReleveDistances();
+        };
+        
+        // Effacer tous les tronçons
+        document.getElementById('clearAllTroncons')?.addEventListener('click', function() {
+            // Supprimer les points de relevé liés aux tronçons
+            state.relevePoints = state.relevePoints.filter(p => !p.tronconId);
+            releveMarkersGroup.clearLayers();
+            
+            state.troncons = [];
+            tronconsLayerGroup.clearLayers();
+            updateTronconsList();
+            updateReleveList();
+            updateReleveDistances();
+            showToast('Tous les tronçons ont été supprimés', 'success');
+        });
+        
+        // Zoom sur les tronçons
+        document.getElementById('zoomToTroncons')?.addEventListener('click', function() {
+            if (state.troncons.length === 0) {
+                showToast('Aucun tronçon à afficher', 'error');
+                return;
+            }
+            
+            const bounds = L.latLngBounds();
+            state.troncons.forEach(t => {
+                bounds.extend([t.debut.lat, t.debut.lon]);
+                bounds.extend([t.arrivee.lat, t.arrivee.lon]);
+            });
+            
+            map.fitBounds(bounds.pad(0.1));
+        });
+        
+        // ============================================================
+        // GESTION DES MODES DE SAISIE
+        // ============================================================
+        
+        // Changer de mode
+        document.getElementById('tronconMode')?.addEventListener('change', function() {
+            const mode = this.value;
+            
+            // Cacher tous les modes
+            document.getElementById('modeExcel').style.display = 'none';
+            document.getElementById('modeManual').style.display = 'none';
+            document.getElementById('modeDraw').style.display = 'none';
+            document.getElementById('modePoints').style.display = 'none';
+            
+            // Afficher le mode sélectionné
+            if (mode === 'excel') document.getElementById('modeExcel').style.display = 'block';
+            if (mode === 'manual') document.getElementById('modeManual').style.display = 'block';
+            if (mode === 'draw') document.getElementById('modeDraw').style.display = 'block';
+            if (mode === 'points') document.getElementById('modePoints').style.display = 'block';
+            
+            // Désactiver les modes actifs
+            stopDrawMode();
+            stopPointsMode();
+        });
+        
+        // ============================================================
+        // MODE SAISIE MANUELLE
+        // ============================================================
+        document.getElementById('addManualTroncon')?.addEventListener('click', async function() {
+            const debutLat = parseFloat(document.getElementById('manualDebutLat').value);
+            const debutLon = parseFloat(document.getElementById('manualDebutLon').value);
+            const arriveeLat = parseFloat(document.getElementById('manualArriveeLat').value);
+            const arriveeLon = parseFloat(document.getElementById('manualArriveeLon').value);
+            const description = document.getElementById('manualDesc').value.trim();
+            const ml = parseInt(document.getElementById('manualML').value) || 0;
+            
+            if (isNaN(debutLat) || isNaN(debutLon) || isNaN(arriveeLat) || isNaN(arriveeLon)) {
+                showToast('Coordonnées GPS invalides', 'error');
+                return;
+            }
+            
+            await addTroncon(debutLat, debutLon, arriveeLat, arriveeLon, description || 'Tronçon manuel', ml);
+            showToast('Tronçon ajouté !', 'success');
+            
+            // Vider les champs
+            document.getElementById('manualDebutLat').value = '';
+            document.getElementById('manualDebutLon').value = '';
+            document.getElementById('manualArriveeLat').value = '';
+            document.getElementById('manualArriveeLon').value = '';
+            document.getElementById('manualDesc').value = '';
+            document.getElementById('manualML').value = '';
+            
+            // Zoom sur le tronçon
+            map.fitBounds([[debutLat, debutLon], [arriveeLat, arriveeLon]], { padding: [50, 50] });
+        });
+        
+        // ============================================================
+        // MODE DESSIN LIBRE
+        // ============================================================
+        let isDrawingMode = false;
+        let currentDrawPath = [];
+        let drawingPolyline = null;
+        let drawingLayer = L.layerGroup().addTo(map);
+        
+        function stopDrawMode() {
+            isDrawingMode = false;
+            currentDrawPath = [];
+            if (drawingPolyline) {
+                drawingLayer.removeLayer(drawingPolyline);
+                drawingPolyline = null;
+            }
+            drawingLayer.clearLayers();
+            map.getContainer().style.cursor = '';
+            document.getElementById('startDrawMode').style.display = 'block';
+            document.getElementById('finishDrawMode').style.display = 'none';
+            document.getElementById('cancelDrawMode').style.display = 'none';
+        }
+        
+        document.getElementById('startDrawMode')?.addEventListener('click', function() {
+            isDrawingMode = true;
+            currentDrawPath = [];
+            map.getContainer().style.cursor = 'crosshair';
+            this.style.display = 'none';
+            document.getElementById('finishDrawMode').style.display = 'block';
+            document.getElementById('cancelDrawMode').style.display = 'block';
+            showToast('🖌️ Mode dessin activé - Maintenez et glissez sur la carte', 'success');
+        });
+        
+        document.getElementById('cancelDrawMode')?.addEventListener('click', stopDrawMode);
+        
+        document.getElementById('finishDrawMode')?.addEventListener('click', async function() {
+            if (currentDrawPath.length < 2) {
+                showToast('Tracé trop court (min 2 points)', 'error');
+                return;
+            }
+            
+            const description = document.getElementById('drawDesc').value.trim() || 'Tracé libre';
+            const ml = parseInt(document.getElementById('drawML').value) || 0;
+            
+            // Simplifier le tracé (garder 1 point sur 5 max)
+            let simplifiedPath = [];
+            const step = Math.max(1, Math.floor(currentDrawPath.length / 50));
+            for (let i = 0; i < currentDrawPath.length; i += step) {
+                simplifiedPath.push(currentDrawPath[i]);
+            }
+            if (simplifiedPath[simplifiedPath.length - 1] !== currentDrawPath[currentDrawPath.length - 1]) {
+                simplifiedPath.push(currentDrawPath[currentDrawPath.length - 1]);
+            }
+            
+            // Ajouter comme tronçon (début et fin)
+            const debut = simplifiedPath[0];
+            const arrivee = simplifiedPath[simplifiedPath.length - 1];
+            
+            await addTronconWithPath(debut.lat, debut.lng, arrivee.lat, arrivee.lng, description, ml, simplifiedPath);
+            
+            showToast(`Tracé ajouté (${simplifiedPath.length} points)`, 'success');
+            document.getElementById('drawDesc').value = '';
+            document.getElementById('drawML').value = '';
+            stopDrawMode();
+        });
+        
+        // Gestion du dessin à la souris
+        let isMouseDown = false;
+        
+        map.on('mousedown', function(e) {
+            if (!isDrawingMode) return;
+            isMouseDown = true;
+            currentDrawPath = [e.latlng];
+            
+            if (drawingPolyline) {
+                drawingLayer.removeLayer(drawingPolyline);
+            }
+            drawingPolyline = L.polyline(currentDrawPath, {
+                color: '#a855f7',
+                weight: 4,
+                opacity: 0.8,
+                dashArray: '5, 10'
+            }).addTo(drawingLayer);
+        });
+        
+        map.on('mousemove', function(e) {
+            if (!isDrawingMode || !isMouseDown) return;
+            currentDrawPath.push(e.latlng);
+            drawingPolyline.setLatLngs(currentDrawPath);
+        });
+        
+        map.on('mouseup', function(e) {
+            if (!isDrawingMode) return;
+            isMouseDown = false;
+        });
+        
+        // ============================================================
+        // MODE POINT PAR POINT
+        // ============================================================
+        let isPointsMode = false;
+        let currentPointsPath = [];
+        let pointsPolyline = null;
+        let pointsMarkers = [];
+        let pointsLayer = L.layerGroup().addTo(map);
+        
+        function stopPointsMode() {
+            isPointsMode = false;
+            currentPointsPath = [];
+            pointsMarkers = [];
+            pointsLayer.clearLayers();
+            map.getContainer().style.cursor = '';
+            document.getElementById('startPointsMode').style.display = 'block';
+            document.getElementById('finishPointsMode').style.display = 'none';
+            document.getElementById('undoLastPoint').style.display = 'none';
+            document.getElementById('cancelPointsMode').style.display = 'none';
+            document.getElementById('pointsCounter').textContent = '0';
+            document.getElementById('pointsTotal').textContent = '0';
+        }
+        
+        function updatePointsDisplay() {
+            const count = currentPointsPath.length;
+            document.getElementById('pointsCounter').textContent = count;
+            document.getElementById('pointsTotal').textContent = count;
+            
+            // Mettre à jour la polyline
+            if (pointsPolyline) {
+                pointsLayer.removeLayer(pointsPolyline);
+            }
+            if (count >= 2) {
+                pointsPolyline = L.polyline(currentPointsPath, {
+                    color: '#eab308',
+                    weight: 4,
+                    opacity: 0.9
+                }).addTo(pointsLayer);
+            }
+        }
+        
+        document.getElementById('startPointsMode')?.addEventListener('click', function() {
+            isPointsMode = true;
+            currentPointsPath = [];
+            pointsMarkers = [];
+            map.getContainer().style.cursor = 'crosshair';
+            this.style.display = 'none';
+            document.getElementById('finishPointsMode').style.display = 'block';
+            document.getElementById('undoLastPoint').style.display = 'block';
+            document.getElementById('cancelPointsMode').style.display = 'block';
+            showToast('📍 Mode points activé - Cliquez pour placer les points', 'success');
+        });
+        
+        document.getElementById('cancelPointsMode')?.addEventListener('click', stopPointsMode);
+        
+        document.getElementById('undoLastPoint')?.addEventListener('click', function() {
+            if (currentPointsPath.length > 0) {
+                currentPointsPath.pop();
+                const lastMarker = pointsMarkers.pop();
+                if (lastMarker) pointsLayer.removeLayer(lastMarker);
+                updatePointsDisplay();
+            }
+        });
+        
+        document.getElementById('finishPointsMode')?.addEventListener('click', async function() {
+            if (currentPointsPath.length < 2) {
+                showToast('Minimum 2 points requis', 'error');
+                return;
+            }
+            
+            const description = document.getElementById('pointsDesc').value.trim() || 'Tracé points';
+            const ml = parseInt(document.getElementById('pointsML').value) || 0;
+            
+            // Ajouter comme tronçon
+            const debut = currentPointsPath[0];
+            const arrivee = currentPointsPath[currentPointsPath.length - 1];
+            
+            await addTronconWithPath(debut.lat, debut.lng, arrivee.lat, arrivee.lng, description, ml, currentPointsPath);
+            
+            showToast(`Tracé ajouté (${currentPointsPath.length} points)`, 'success');
+            document.getElementById('pointsDesc').value = '';
+            document.getElementById('pointsML').value = '';
+            stopPointsMode();
+        });
+        
+        // Clic sur la carte pour ajouter un point
+        map.on('click', function(e) {
+            if (!isPointsMode) return;
+            
+            currentPointsPath.push(e.latlng);
+            
+            // Ajouter un marqueur
+            const marker = L.circleMarker(e.latlng, {
+                radius: 8,
+                fillColor: '#eab308',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 1
+            }).addTo(pointsLayer);
+            
+            marker.bindTooltip(`P${currentPointsPath.length}`, { permanent: true, direction: 'top', className: 'point-label' });
+            pointsMarkers.push(marker);
+            
+            updatePointsDisplay();
+        });
+        
+        // ============================================================
+        // FONCTION TRONÇON AVEC PATH COMPLET
+        // ============================================================
+        async function addTronconWithPath(debutLat, debutLon, arriveeLat, arriveeLon, description, ml, path) {
+            const id = ++tronconIdCounter;
+            const color = TRONCON_COLORS[(id - 1) % TRONCON_COLORS.length];
+            
+            // Convertir en Lambert
+            const lambertDebut = await convertToLambert(debutLat, debutLon);
+            const lambertArrivee = await convertToLambert(arriveeLat, arriveeLon);
+            
+            const troncon = {
+                id,
+                debut: { lat: debutLat, lon: debutLon, x: lambertDebut.x, y: lambertDebut.y },
+                arrivee: { lat: arriveeLat, lon: arriveeLon, x: lambertArrivee.x, y: lambertArrivee.y },
+                description: description,
+                ml: ml,
+                color,
+                path: path.map(p => ({ lat: p.lat, lng: p.lng })) // Sauvegarder le chemin complet
+            };
+            
+            state.troncons.push(troncon);
+            
+            // Dessiner le chemin complet
+            const polyline = L.polyline(path, {
+                color: color,
+                weight: 4,
+                opacity: 0.9
+            });
+            polyline.tronconId = id;
+            tronconsLayerGroup.addLayer(polyline);
+            
+            // Marqueurs début/fin
+            const startMarker = L.circleMarker([debutLat, debutLon], {
+                radius: 8,
+                fillColor: '#22c55e',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 1
+            });
+            startMarker.tronconId = id;
+            startMarker.bindTooltip('DÉBUT', { permanent: false });
+            tronconsLayerGroup.addLayer(startMarker);
+            
+            const endMarker = L.circleMarker([arriveeLat, arriveeLon], {
+                radius: 8,
+                fillColor: '#ef4444',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 1
+            });
+            endMarker.tronconId = id;
+            endMarker.bindTooltip('FIN', { permanent: false });
+            tronconsLayerGroup.addLayer(endMarker);
+            
+            // Label ML au milieu
+            if (ml) {
+                const midIndex = Math.floor(path.length / 2);
+                const midPoint = path[midIndex];
+                const label = L.marker([midPoint.lat, midPoint.lng], {
+                    icon: L.divIcon({
+                        html: `<div style="background: ${color}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap;">${ml}m</div>`,
+                        className: 'troncon-label',
+                        iconSize: [50, 20],
+                        iconAnchor: [25, 10]
+                    })
+                });
+                label.tronconId = id;
+                tronconsLayerGroup.addLayer(label);
+            }
+            
+            // Points de relevé
+            const pointDebut = {
+                id: Date.now() + Math.random(),
+                lat: debutLat, lon: debutLon,
+                x: lambertDebut.x, y: lambertDebut.y,
+                name: `${ml}m-DEB`, desc: description,
+                tronconId: id, type: 'debut'
+            };
+            state.relevePoints.push(pointDebut);
+            
+            const pointArrivee = {
+                id: Date.now() + Math.random() + 1,
+                lat: arriveeLat, lon: arriveeLon,
+                x: lambertArrivee.x, y: lambertArrivee.y,
+                name: `${ml}m-ARR`, desc: description,
+                tronconId: id, type: 'arrivee'
+            };
+            state.relevePoints.push(pointArrivee);
+            
+            updateTronconsList();
+            updateReleveList();
+            updateReleveDistances();
+        }
+        
+        // ============================================================
+        // IMPORT EXCEL POUR TRONÇONS
+        // ============================================================
+        const excelImportZone = document.getElementById('excelImportZone');
+        const excelFileInput = document.getElementById('excelFileInput');
+        
+        excelImportZone?.addEventListener('click', () => excelFileInput.click());
+        
+        excelImportZone?.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            excelImportZone.classList.add('dragover');
+        });
+        
+        excelImportZone?.addEventListener('dragleave', () => {
+            excelImportZone.classList.remove('dragover');
+        });
+        
+        excelImportZone?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            excelImportZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) processExcelFile(file);
+        });
+        
+        excelFileInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) processExcelFile(file);
+        });
+        
+        async function processExcelFile(file) {
+            showToast('Traitement du fichier Excel...', 'success');
+            
+            const extension = file.name.split('.').pop().toLowerCase();
+            
+            if (extension === 'csv') {
+                const text = await file.text();
+                parseCSVData(text);
+            } else {
+                // Excel XLSX
+                if (typeof XLSX === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    script.onload = () => readExcelFile(file);
+                    document.head.appendChild(script);
+                } else {
+                    readExcelFile(file);
+                }
+            }
+        }
+        
+        function readExcelFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    console.log('Excel data:', jsonData);
+                    parseExcelData(jsonData);
+                } catch (err) {
+                    console.error('Erreur lecture Excel:', err);
+                    showToast('Erreur de lecture du fichier Excel', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function parseCSVData(text) {
+            const lines = text.split('\n').filter(l => l.trim());
+            const data = lines.map(line => line.split(/[,;]/).map(cell => cell.trim()));
+            parseExcelData(data);
+        }
+        
+        async function parseExcelData(data) {
+            // Structure Excel TRONÇONS:
+            // Ligne 0 (Début): Coordonnées GPS début "35.171088,-3.155651"
+            // Ligne 1 (Arrivée): Coordonnées GPS arrivée "35.172721,-3.155609"
+            // Ligne 2 (Description): Description du câble
+            // Ligne 3 (ML): Distance en mètres
+            
+            // Ignorer la première colonne (labels: Début, Arrivée, Description, ML)
+            const startCol = (data[0]?.[0] && String(data[0][0]).toLowerCase().includes('début')) ? 1 : 0;
+            
+            let addedCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            // Effacer les anciens tronçons
+            state.troncons = [];
+            tronconsLayerGroup.clearLayers();
+            tronconIdCounter = 0;
+            
+            for (let col = startCol; col < (data[0]?.length || 0); col++) {
+                try {
+                    // Ligne 0: Début GPS
+                    const cellDebut = String(data[0]?.[col] || '').trim();
+                    // Ligne 1: Arrivée GPS
+                    const cellArrivee = String(data[1]?.[col] || '').trim();
+                    // Ligne 2: Description
+                    const description = String(data[2]?.[col] || '').trim();
+                    // Ligne 3: ML (distance)
+                    const mlStr = String(data[3]?.[col] || '').trim();
+                    const ml = parseInt(mlStr) || 0;
+                    
+                    // Parser les coordonnées de début
+                    const coordsDebut = cellDebut.match(/([\d.-]+)[,\s]+([\d.-]+)/);
+                    if (!coordsDebut) {
+                        errors.push(`Col ${col+1}: Début invalide "${cellDebut}"`);
+                        errorCount++;
+                        continue;
+                    }
+                    const debutLat = parseFloat(coordsDebut[1]);
+                    const debutLon = parseFloat(coordsDebut[2]);
+                    
+                    // Parser les coordonnées d'arrivée
+                    const coordsArrivee = cellArrivee.match(/([\d.-]+)[,\s]+([\d.-]+)/);
+                    if (!coordsArrivee) {
+                        errors.push(`Col ${col+1}: Arrivée invalide "${cellArrivee}"`);
+                        errorCount++;
+                        continue;
+                    }
+                    const arriveeLat = parseFloat(coordsArrivee[1]);
+                    const arriveeLon = parseFloat(coordsArrivee[2]);
+                    
+                    // Valider les coordonnées
+                    if (isNaN(debutLat) || isNaN(debutLon) || isNaN(arriveeLat) || isNaN(arriveeLon)) {
+                        errors.push(`Col ${col+1}: Coordonnées non numériques`);
+                        errorCount++;
+                        continue;
+                    }
+                    
+                    // Valider zone Maroc (élargie)
+                    if (debutLat < 20 || debutLat > 40 || debutLon < -20 || debutLon > 5 ||
+                        arriveeLat < 20 || arriveeLat > 40 || arriveeLon < -20 || arriveeLon > 5) {
+                        errors.push(`Col ${col+1}: Coordonnées hors zone Maroc`);
+                        errorCount++;
+                        continue;
+                    }
+                    
+                    // Créer le nom avec ML si disponible
+                    const tronconName = description || `Tronçon ${ml}m`;
+                    
+                    // Ajouter le tronçon
+                    await addTroncon(debutLat, debutLon, arriveeLat, arriveeLon, tronconName, ml);
+                    addedCount++;
+                    
+                } catch (err) {
+                    console.error('Erreur colonne ' + col, err);
+                    errors.push(`Col ${col+1}: ${err.message}`);
+                    errorCount++;
+                }
+            }
+            
+            // Résumé
+            if (addedCount > 0) {
+                showToast(`✅ ${addedCount} tronçons importés !`, 'success');
+                
+                // Zoom sur les tronçons
+                setTimeout(() => {
+                    if (state.troncons.length > 0) {
+                        const bounds = L.latLngBounds();
+                        state.troncons.forEach(t => {
+                            bounds.extend([t.debut.lat, t.debut.lon]);
+                            bounds.extend([t.arrivee.lat, t.arrivee.lon]);
+                        });
+                        map.fitBounds(bounds.pad(0.1));
+                    }
+                }, 500);
+            }
+            
+            if (errorCount > 0) {
+                console.error('Erreurs import:', errors);
+                showToast(`⚠️ ${errorCount} erreurs (voir console)`, 'error');
+            }
+        }
+        
+        // ============================================================
+        // SYSTÈME DE VÉRIFICATION TRONÇONS
+        // ============================================================
+        document.getElementById('verifyDataBtn')?.addEventListener('click', async function() {
+            const results = document.getElementById('verificationResults');
+            results.innerHTML = '<div style="text-align: center; padding: 10px; color: #64748b;">Vérification en cours...</div>';
+            
+            const checks = [];
+            let hasErrors = false;
+            let hasWarnings = false;
+            
+            // 1. Vérifier zone sélectionnée
+            if (!state.bbox) {
+                checks.push({ type: 'error', msg: '❌ Aucune zone sélectionnée' });
+                hasErrors = true;
+            } else {
+                checks.push({ type: 'success', msg: '✅ Zone sélectionnée OK' });
+            }
+            
+            // 2. Vérifier les tronçons
+            if (state.troncons.length === 0) {
+                checks.push({ type: 'warning', msg: '⚠️ Aucun tronçon importé' });
+                hasWarnings = true;
+            } else {
+                checks.push({ type: 'success', msg: `✅ ${state.troncons.length} tronçon(s) câbles` });
+                
+                // Vérifier coordonnées Lambert
+                let lambertErrors = 0;
+                for (const t of state.troncons) {
+                    if (!t.debut.x || !t.debut.y || !t.arrivee.x || !t.arrivee.y) {
+                        lambertErrors++;
+                    }
+                }
+                
+                if (lambertErrors > 0) {
+                    checks.push({ type: 'error', msg: `❌ ${lambertErrors} tronçon(s) sans coords Lambert` });
+                    hasErrors = true;
+                } else {
+                    checks.push({ type: 'success', msg: '✅ Coordonnées Lambert OK' });
+                }
+                
+                // Calculer distance totale
+                let totalML = 0;
+                state.troncons.forEach(t => totalML += t.ml);
+                checks.push({ type: 'success', msg: `📏 Distance totale: ${totalML} mètres` });
+            }
+            
+            // 3. Vérifier couches
+            const checkedLayers = document.querySelectorAll('.layer-item input:checked');
+            if (checkedLayers.length === 0) {
+                checks.push({ type: 'warning', msg: '⚠️ Aucune couche sélectionnée' });
+                hasWarnings = true;
+            } else {
+                checks.push({ type: 'success', msg: `✅ ${checkedLayers.length} couche(s)` });
+            }
+            
+            // Afficher résultats
+            let html = '';
+            for (const check of checks) {
+                html += `<div class="verification-result ${check.type}">${check.msg}</div>`;
+            }
+            
+            if (hasErrors) {
+                html += `<div class="verification-result error" style="margin-top: 10px; font-weight: bold;">
+                    🚫 Erreurs à corriger avant l'export
+                </div>`;
+            } else if (hasWarnings) {
+                html += `<div class="verification-result warning" style="margin-top: 10px; font-weight: bold;">
+                    ⚠️ Vérifiez les avertissements
+                </div>`;
+            } else {
+                html += `<div class="verification-result success" style="margin-top: 10px; font-weight: bold;">
+                    ✅ Tout est prêt pour l'export !
+                </div>`;
+            }
+            
+            results.innerHTML = html;
+        });
+        
+        // ============================================================
+        // PRÉVISUALISATION GRILLE LAMBERT
+        // ============================================================
+        gridPreviewGroup = L.layerGroup().addTo(map);
+        
+        function updateGridPreview() {
+            gridPreviewGroup.clearLayers();
+            
+            if (!state.bbox || !document.getElementById('showGridPreview').checked) return;
+            
+            const spacing = document.getElementById('gridSpacing').value;
+            const offset = parseInt(document.getElementById('gridOffset').value) || 0;
+            const mode = document.getElementById('gridMode').value;
+            
+            // Calculer l'espacement en degrés (approximatif)
+            let spacingMeters = spacing === 'auto' ? 100 : parseInt(spacing);
+            const spacingDeg = spacingMeters / 111000; // ~111km par degré
+            
+            const [south, west, north, east] = state.bbox;
+            
+            // Fonction pour ajouter une croix
+            const addCross = (lat, lon) => {
+                const crossIcon = L.divIcon({
+                    html: '<div style="color: #8b5cf6; font-size: 16px; font-weight: bold;">+</div>',
+                    className: 'grid-cross-preview',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+                const marker = L.marker([lat, lon], { icon: crossIcon, interactive: false });
+                gridPreviewGroup.addLayer(marker);
+            };
+            
+            if (mode === 'corners') {
+                // 4 coins uniquement
+                addCross(south, west);
+                addCross(south, east);
+                addCross(north, west);
+                addCross(north, east);
+            } else if (mode === 'extremities') {
+                // Extrémités: croix le long des 4 bords avec l'espacement choisi
+                const added = new Set();
+                const addUnique = (lat, lon) => {
+                    const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+                    if (!added.has(key)) {
+                        addCross(lat, lon);
+                        added.add(key);
+                    }
+                };
+                
+                // Bord Sud (lat = south)
+                for (let lon = Math.ceil(west / spacingDeg) * spacingDeg; lon <= east; lon += spacingDeg) {
+                    addUnique(south, lon);
+                }
+                
+                // Bord Nord (lat = north)
+                for (let lon = Math.ceil(west / spacingDeg) * spacingDeg; lon <= east; lon += spacingDeg) {
+                    addUnique(north, lon);
+                }
+                
+                // Bord Ouest (lon = west)
+                for (let lat = Math.ceil(south / spacingDeg) * spacingDeg; lat <= north; lat += spacingDeg) {
+                    addUnique(lat, west);
+                }
+                
+                // Bord Est (lon = east)
+                for (let lat = Math.ceil(south / spacingDeg) * spacingDeg; lat <= north; lat += spacingDeg) {
+                    addUnique(lat, east);
+                }
+                
+                // 4 coins exacts
+                addUnique(south, west);
+                addUnique(south, east);
+                addUnique(north, west);
+                addUnique(north, east);
+            } else {
+                // Grille complète
+                const startLat = Math.ceil(south / spacingDeg) * spacingDeg;
+                const startLon = Math.ceil(west / spacingDeg) * spacingDeg;
+                
+                let count = 0;
+                const maxCrosses = 200;
+                
+                for (let lat = startLat; lat <= north && count < maxCrosses; lat += spacingDeg) {
+                    for (let lon = startLon; lon <= east && count < maxCrosses; lon += spacingDeg) {
+                        addCross(lat, lon);
+                        count++;
+                    }
+                }
+            }
+        }
+        
+        // Mettre à jour la prévisualisation quand les options changent
+        document.getElementById('gridSpacing')?.addEventListener('change', updateGridPreview);
+        document.getElementById('gridOffset')?.addEventListener('change', updateGridPreview);
+        document.getElementById('showGridPreview')?.addEventListener('change', updateGridPreview);
+        document.getElementById('gridMode')?.addEventListener('change', updateGridPreview);
+        
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // Layer selector
+        document.querySelectorAll('.layer-item').forEach(item => {
+            item.addEventListener('click', () => {
+                item.classList.toggle('selected');
+                const checkbox = item.querySelector('input');
+                checkbox.checked = item.classList.contains('selected');
+                
+                state.layers = [];
+                document.querySelectorAll('.layer-item.selected').forEach(sel => {
+                    state.layers.push(sel.dataset.layer);
+                });
+            });
+        });
+        
+        // Événement de dessin
+        map.on(L.Draw.Event.CREATED, async function(e) {
+            drawnItems.clearLayers();
+            drawnItems.addLayer(e.layer);
+            
+            const bounds = e.layer.getBounds();
+            state.bbox = [
+                bounds.getSouth(),
+                bounds.getWest(),
+                bounds.getNorth(),
+                bounds.getEast()
+            ];
+            
+            // Calculer le centre en Lambert
+            const centerLat = (bounds.getSouth() + bounds.getNorth()) / 2;
+            const centerLon = (bounds.getWest() + bounds.getEast()) / 2;
+            
+            try {
+                const response = await fetch('/api/convert-lambert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lon: centerLon, lat: centerLat })
+                });
+                const lambert = await response.json();
+                state.lambertCenter = { x: lambert.x, y: lambert.y };
+                
+                document.getElementById('zoneLambertX').textContent = Math.round(lambert.x);
+                document.getElementById('zoneLambertY').textContent = Math.round(lambert.y);
+            } catch (err) {
+                console.error('Erreur Lambert:', err);
+            }
+            
+            // Calculer la surface
+            const latKm = Math.abs(bounds.getNorth() - bounds.getSouth()) * 111;
+            const lonKm = Math.abs(bounds.getEast() - bounds.getWest()) * 111 * Math.cos(centerLat * Math.PI / 180);
+            const areaKm2 = latKm * lonKm;
+            
+            document.getElementById('zoneArea').textContent = areaKm2.toFixed(2);
+            document.getElementById('zoneInfo').classList.add('visible');
+            document.getElementById('downloadBtn').disabled = false;
+            
+            // Mettre à jour la prévisualisation des croix
+            updateGridPreview();
+        });
+        
+        map.on(L.Draw.Event.DELETED, function() {
+            state.bbox = null;
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('zoneInfo').classList.remove('visible');
+            gridPreviewGroup.clearLayers();
+        });
+        
+        // Clear button
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            drawnItems.clearLayers();
+            state.bbox = null;
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('zoneInfo').classList.remove('visible');
+            gridPreviewGroup.clearLayers();
+        });
+        
+        // Update preview
+        function updatePreview() {
+            document.getElementById('previewOrganisme').textContent = document.getElementById('cartOrganisme').value || '-';
+            document.getElementById('previewDirection').textContent = document.getElementById('cartDirection').value || '-';
+            document.getElementById('previewTravaux').textContent = (document.getElementById('cartTravaux').value || '-').substring(0, 40) + '...';
+            document.getElementById('previewType').textContent = document.getElementById('cartTypePlan').value;
+            document.getElementById('previewEchelle').textContent = document.getElementById('cartEchelle').value;
+            document.getElementById('previewDate').textContent = document.getElementById('cartDate').value || '-';
+            document.getElementById('previewSociete').textContent = document.getElementById('cartSociete').value || '-';
+        }
+        
+        // Listen to input changes
+        document.querySelectorAll('#tab-cartouche input, #tab-cartouche select, #tab-cartouche textarea').forEach(el => {
+            el.addEventListener('input', updatePreview);
+            el.addEventListener('change', updatePreview);
+        });
+        
+        // Search autocomplete
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsDiv = document.getElementById('searchSuggestions');
+        let searchTimeout = null;
+        
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (searchTimeout) clearTimeout(searchTimeout);
+            
+            if (query.length < 3) {
+                suggestionsDiv.classList.remove('visible');
+                return;
+            }
+            
+            suggestionsDiv.innerHTML = '<div style="padding: 10px; color: #64748b;">Recherche...</div>';
+            suggestionsDiv.classList.add('visible');
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+                        { headers: { 'Accept-Language': 'fr' } }
+                    );
+                    const results = await response.json();
+                    
+                    if (results.length === 0) {
+                        suggestionsDiv.innerHTML = '<div style="padding: 10px; color: #64748b;">Aucun résultat</div>';
+                        return;
+                    }
+                    
+                    suggestionsDiv.innerHTML = results.map(r => `
+                        <div class="suggestion-item" data-lat="${r.lat}" data-lon="${r.lon}">
+                            <div class="suggestion-name">${r.display_name.split(',')[0]}</div>
+                            <div class="suggestion-detail">${r.display_name.split(',').slice(1, 3).join(',')}</div>
+                        </div>
+                    `).join('');
+                    
+                    document.querySelectorAll('.suggestion-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const lat = parseFloat(item.dataset.lat);
+                            const lon = parseFloat(item.dataset.lon);
+                            map.setView([lat, lon], 15);
+                            suggestionsDiv.classList.remove('visible');
+                            const locationName = item.querySelector('.suggestion-name').textContent;
+                            searchInput.value = locationName;
+                            
+                            // Ajouter marqueur étoile de repérage
+                            addSearchStarMarker(lat, lon, locationName);
+                        });
+                    });
+                } catch (err) {
+                    suggestionsDiv.innerHTML = '<div style="padding: 10px; color: #ef4444;">Erreur</div>';
+                }
+            }, 300);
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                suggestionsDiv.classList.remove('visible');
+            }
+        });
+        
+        // Contour interval
+        document.getElementById('contourInterval').addEventListener('change', (e) => {
+            state.contourInterval = parseInt(e.target.value) || 10;
+        });
+        
+        // Download button
+        document.getElementById('downloadBtn').addEventListener('click', async () => {
+            if (!state.bbox) {
+                showToast('Sélectionnez une zone sur la carte', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('Génération du DXF avec maquette...', 'Coordonnées Lambert + Cartouche professionnel');
+                
+                // Collecter les données du cartouche
+                const cartouche = {
+                    organisme: document.getElementById('cartOrganisme').value,
+                    direction: document.getElementById('cartDirection').value,
+                    travaux: document.getElementById('cartTravaux').value,
+                    typePlan: document.getElementById('cartTypePlan').value,
+                    troncon: document.getElementById('cartTroncon').value,
+                    gc: document.getElementById('cartGC').value,
+                    numPlan: document.getElementById('cartNumPlan').value,
+                    echelle: document.getElementById('cartEchelle').value,
+                    societe: document.getElementById('cartSociete').value,
+                    adresse: document.getElementById('cartAdresse').value,
+                    tel: document.getElementById('cartTel').value,
+                    fax: document.getElementById('cartFax').value,
+                    leve: document.getElementById('cartLeve').value,
+                    verifie: document.getElementById('cartVerifie').value,
+                    date: document.getElementById('cartDate').value,
+                    contrat: document.getElementById('cartContrat').value,
+                    cmo: document.getElementById('cartCMO').value,
+                    dc: document.getElementById('cartDC').value
+                };
+                
+                // Préparer les données des tronçons câbles
+                let tronconsData = [];
+                if (state.troncons && state.troncons.length > 0) {
+                    tronconsData = state.troncons.map(t => ({
+                        debut: { lat: t.debut.lat, lon: t.debut.lon, x: t.debut.x, y: t.debut.y },
+                        arrivee: { lat: t.arrivee.lat, lon: t.arrivee.lon, x: t.arrivee.x, y: t.arrivee.y },
+                        description: t.description,
+                        ml: t.ml,
+                        color: t.color
+                    }));
+                }
+                
+                const response = await fetch('/api/download-with-template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bbox: state.bbox,
+                        layers: state.layers,
+                        contour_interval: state.contourInterval,
+                        cartouche: cartouche,
+                        show_road_labels: document.getElementById('showRoadLabels').checked,
+                        grid_spacing: document.getElementById('gridSpacing').value,
+                        grid_offset: parseInt(document.getElementById('gridOffset').value) || 0,
+                        grid_mode: document.getElementById('gridMode').value,
+                        troncons: tronconsData
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erreur serveur');
+                }
+                
+                // Télécharger
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hyperysco_maquette.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                hideLoading();
+                showToast('✅ DXF avec maquette téléchargé!', 'success');
+                
+            } catch (err) {
+                hideLoading();
+                showToast(err.message || 'Erreur', 'error');
+            }
+        });
+        
+        // Helpers
+        function showLoading(text, sub) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingSub').textContent = sub;
+            document.getElementById('loadingOverlay').classList.add('visible');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('visible');
+        }
+        
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} visible`;
+            setTimeout(() => toast.classList.remove('visible'), 4000);
+        }
+        
+        // ============================================================
+        // POINTS DE RELEVÉ LAMBERT
+        // ============================================================
+        const releveMarkersGroup = L.layerGroup().addTo(map);
+        
+        // Toggle mode
+        document.getElementById('releveToggle').addEventListener('click', function() {
+            state.releveMode = !state.releveMode;
+            this.classList.toggle('active', state.releveMode);
+            
+            if (state.releveMode) {
+                map.getContainer().style.cursor = 'crosshair';
+            } else {
+                map.getContainer().style.cursor = '';
+            }
+        });
+        
+        // Add point on map click
+        map.on('click', async function(e) {
+            if (!state.releveMode) return;
+            
+            const lat = e.latlng.lat;
+            const lon = e.latlng.lng;
+            
+            // Utiliser l'API serveur pour conversion Lambert précise (pyproj)
+            try {
+                const response = await fetch('/api/convert-lambert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lon: lon, lat: lat })
+                });
+                
+                const lambert = await response.json();
+                
+                if (lambert.error) {
+                    showToast('Erreur de conversion', 'error');
+                    return;
+                }
+                
+                const point = {
+                    id: Date.now(),
+                    lat: lat,
+                    lon: lon,
+                    x: lambert.x,
+                    y: lambert.y
+                };
+                
+                state.relevePoints.push(point);
+                
+                // Add marker
+                const marker = L.circleMarker([lat, lon], {
+                    radius: 8,
+                    fillColor: '#f59e0b',
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(releveMarkersGroup);
+                
+                marker.bindTooltip(`P${state.relevePoints.length}: X=${point.x.toFixed(2)}, Y=${point.y.toFixed(2)}`, {
+                    permanent: false,
+                    direction: 'top'
+                });
+                
+                marker.pointId = point.id;
+                
+                updateReleveList();
+                updateReleveDistances();
+                
+                showToast(`Point: X=${point.x.toFixed(0)}, Y=${point.y.toFixed(0)}`, 'success');
+            } catch (err) {
+                console.error('Erreur API Lambert:', err);
+                showToast('Erreur de conversion Lambert', 'error');
+            }
+        });
+        
+        function updateReleveList() {
+            const list = document.getElementById('releveList');
+            
+            if (state.relevePoints.length === 0) {
+                list.innerHTML = '<div class="releve-empty">Activez le mode et cliquez sur la carte pour ajouter des points de calage</div>';
+                return;
+            }
+            
+            list.innerHTML = state.relevePoints.map((p, i) => {
+                // Si le point a un nom personnalisé (import Excel), l'afficher
+                const displayName = p.name || `P${i+1}`;
+                return `
+                    <div class="releve-item" data-id="${p.id}" style="${p.type === 'debut' ? 'border-left: 3px solid #22c55e;' : p.type === 'arrivee' ? 'border-left: 3px solid #ef4444;' : ''}">
+                        <div class="releve-coords">
+                            <span class="lambert" style="font-weight: 600; color: ${p.type === 'debut' ? '#22c55e' : p.type === 'arrivee' ? '#ef4444' : '#f59e0b'};">${displayName}: X=${p.x.toFixed(0)} Y=${p.y.toFixed(0)}</span>
+                            <span class="gps" style="font-size: 9px;">GPS: ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span>
+                        </div>
+                        <button class="releve-delete" onclick="deleteRelevePoint(${typeof p.id === 'number' ? p.id : '\'' + p.id + '\''})">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateReleveDistances() {
+            const distDiv = document.getElementById('releveDistance');
+            const content = document.getElementById('releveDistanceContent');
+            
+            if (state.relevePoints.length < 2) {
+                distDiv.style.display = 'none';
+                return;
+            }
+            
+            distDiv.style.display = 'block';
+            let html = '';
+            let totalDist = 0;
+            
+            for (let i = 1; i < state.relevePoints.length; i++) {
+                const dist = calculateLambertDistance(state.relevePoints[i-1], state.relevePoints[i]);
+                totalDist += dist;
+                html += `
+                    <div class="distance-line">
+                        <span class="distance-label">P${i} → P${i+1}</span>
+                        <span class="distance-val">${dist.toFixed(2)} m</span>
+                    </div>
+                `;
+            }
+            
+            if (state.relevePoints.length > 2) {
+                html += `
+                    <div class="distance-line" style="border-top: 1px solid #f59e0b40; margin-top: 4px; padding-top: 6px;">
+                        <span class="distance-label" style="font-weight: 600;">TOTAL</span>
+                        <span class="distance-val" style="font-size: 14px;">${totalDist.toFixed(2)} m</span>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        window.deleteRelevePoint = function(id) {
+            state.relevePoints = state.relevePoints.filter(p => p.id !== id);
+            
+            releveMarkersGroup.eachLayer(layer => {
+                if (layer.pointId === id) {
+                    releveMarkersGroup.removeLayer(layer);
+                }
+            });
+            
+            updateReleveList();
+            updateReleveDistances();
+        };
+        
+        // Clear all points
+        document.getElementById('releveClear').addEventListener('click', function() {
+            state.relevePoints = [];
+            releveMarkersGroup.clearLayers();
+            updateReleveList();
+            updateReleveDistances();
+        });
+        
+        // Export/Copy points
+        document.getElementById('releveExport').addEventListener('click', function() {
+            if (state.relevePoints.length === 0) {
+                showToast('Aucun point à copier', 'error');
+                return;
+            }
+            
+            let text = 'Points de Relevé Lambert Zone I Maroc\n';
+            text += '===================================\n\n';
+            
+            state.relevePoints.forEach((p, i) => {
+                text += `Point ${i+1}:\n`;
+                text += `  Lambert X: ${p.x.toFixed(2)}\n`;
+                text += `  Lambert Y: ${p.y.toFixed(2)}\n`;
+                text += `  GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}\n\n`;
+            });
+            
+            if (state.relevePoints.length >= 2) {
+                text += 'Distances:\n';
+                text += '---------\n';
+                let total = 0;
+                for (let i = 1; i < state.relevePoints.length; i++) {
+                    const dist = calculateLambertDistance(state.relevePoints[i-1], state.relevePoints[i]);
+                    total += dist;
+                    text += `P${i} → P${i+1}: ${dist.toFixed(2)} m\n`;
+                }
+                if (state.relevePoints.length > 2) {
+                    text += `TOTAL: ${total.toFixed(2)} m\n`;
+                }
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Coordonnées copiées !', 'success');
+            }).catch(() => {
+                showToast('Erreur de copie', 'error');
+            });
+        });
+        
+        // Init preview
+        updatePreview();
+    </script>
+</body>
+</html>

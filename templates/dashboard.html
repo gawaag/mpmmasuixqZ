@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Hyperysco-Map{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: var(--gradient-dark);
+        padding: 60px 0;
+        color: var(--white);
+    }
+
+    .dashboard-welcome {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .dashboard-avatar {
+        width: 80px;
+        height: 80px;
+        background: var(--gradient-primary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--white);
+    }
+
+    .dashboard-info h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .dashboard-info p {
+        color: var(--gray-400);
+    }
+
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        margin-top: 32px;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 24px;
+        backdrop-filter: blur(10px);
+    }
+
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--white);
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: var(--gray-400);
+        margin-top: 4px;
+    }
+
+    /* Main Content */
+    .dashboard-content {
+        padding: 48px 0;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 32px;
+    }
+
+    .card {
+        background: var(--white);
+        border-radius: 16px;
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .card-body {
+        padding: 24px;
+    }
+
+    /* Exports Table */
+    .exports-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .exports-table th,
+    .exports-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .exports-table th {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .exports-table td {
+        font-size: 14px;
+        color: var(--gray-600);
+    }
+
+    .export-empty {
+        text-align: center;
+        padding: 48px;
+        color: var(--gray-400);
+    }
+
+    .export-empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .quick-action {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: var(--gray-100);
+        border-radius: 12px;
+        text-decoration: none;
+        color: var(--dark);
+        transition: all 0.2s;
+    }
+
+    .quick-action:hover {
+        background: var(--primary);
+        color: var(--white);
+    }
+
+    .quick-action-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--white);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .quick-action-text h4 {
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
+    .quick-action-text p {
+        font-size: 13px;
+        opacity: 0.7;
+    }
+
+    /* Plan Card */
+    .plan-card {
+        background: linear-gradient(135deg, #0066FF 0%, #00B4D8 100%);
+        border-radius: 16px;
+        padding: 24px;
+        color: var(--white);
+        margin-top: 24px;
+    }
+
+    .plan-card-title {
+        font-size: 14px;
+        opacity: 0.8;
+        margin-bottom: 8px;
+    }
+
+    .plan-card-name {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .plan-card-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background: var(--white);
+        color: var(--primary);
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="dashboard-header">
+    <div class="container">
+        <div class="dashboard-welcome">
+            <div class="dashboard-avatar">{{ user.username[0] }}</div>
+            <div class="dashboard-info">
+                <h1>Bienvenue, {{ user.username }}!</h1>
+                <p>Membre depuis {{ user.created_at[:10] if user.created_at else 'récemment' }}</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ user.exports_count or 0 }}</div>
+                <div class="stat-label">Exports réalisés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ user.plan | capitalize }}</div>
+                <div class="stat-label">Plan actuel</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ exports | length }}</div>
+                <div class="stat-label">Ce mois-ci</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">∞</div>
+                <div class="stat-label">Points Lambert</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content -->
+<div class="dashboard-content">
+    <div class="container">
+        <div class="dashboard-grid">
+            <!-- Exports History -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Historique des exports</h3>
+                    <a href="{{ url_for('map_app') }}" class="btn btn-primary">Nouvel export</a>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    {% if exports and exports | length > 0 %}
+                        <table class="exports-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Zone</th>
+                                    <th>Couches</th>
+                                    <th>Taille</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for export in exports %}
+                                <tr>
+                                    <td>{{ export.created_at[:16] }}</td>
+                                    <td>{{ export.bbox[:30] }}...</td>
+                                    <td>{{ export.layers }}</td>
+                                    <td>{{ (export.file_size / 1024) | round(1) }} Ko</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="export-empty">
+                            <div class="export-empty-icon">📭</div>
+                            <p>Aucun export pour le moment</p>
+                            <a href="{{ url_for('map_app') }}" class="btn btn-primary" style="margin-top: 16px;">
+                                Créer mon premier export
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div>
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Actions rapides</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <a href="{{ url_for('map_app') }}" class="quick-action">
+                                <div class="quick-action-icon">🗺️</div>
+                                <div class="quick-action-text">
+                                    <h4>Nouvelle carte</h4>
+                                    <p>Créer un export DXF</p>
+                                </div>
+                            </a>
+                            <a href="{{ url_for('pricing') }}" class="quick-action">
+                                <div class="quick-action-icon">⬆️</div>
+                                <div class="quick-action-text">
+                                    <h4>Upgrade</h4>
+                                    <p>Passer au plan Pro</p>
+                                </div>
+                            </a>
+                            <a href="{{ url_for('about') }}" class="quick-action">
+                                <div class="quick-action-icon">❓</div>
+                                <div class="quick-action-text">
+                                    <h4>Aide</h4>
+                                    <p>Documentation</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Plan Card -->
+                <div class="plan-card">
+                    <div class="plan-card-title">Votre plan</div>
+                    <div class="plan-card-name">{{ user.plan | capitalize }}</div>
+                    {% if user.plan == 'free' %}
+                        <a href="{{ url_for('pricing') }}" class="plan-card-btn">Passer au Pro</a>
+                    {% else %}
+                        <span style="opacity: 0.8;">Plan actif ✓</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

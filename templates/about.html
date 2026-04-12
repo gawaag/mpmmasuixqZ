@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block title %}À propos - Hyperysco-Map{% endblock %}
+
+{% block extra_css %}
+<style>
+    .about-hero {
+        background: var(--gradient-dark);
+        padding: 100px 0;
+        text-align: center;
+        color: var(--white);
+    }
+
+    .about-hero-title {
+        font-size: 56px;
+        font-weight: 800;
+        margin-bottom: 20px;
+    }
+
+    .about-hero-title span {
+        background: linear-gradient(135deg, #38bdf8 0%, #22c55e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .about-hero-desc {
+        font-size: 20px;
+        color: var(--gray-400);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Mission Section */
+    .mission-section {
+        padding: 100px 0;
+    }
+
+    .mission-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 80px;
+        align-items: center;
+    }
+
+    .mission-content h2 {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 24px;
+    }
+
+    .mission-content p {
+        font-size: 17px;
+        color: var(--gray-500);
+        line-height: 1.8;
+        margin-bottom: 16px;
+    }
+
+    .mission-visual {
+        background: linear-gradient(135deg, #0066FF 0%, #00B4D8 100%);
+        border-radius: 24px;
+        padding: 48px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mission-visual::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    }
+
+    .mission-logo {
+        text-align: center;
+        color: white;
+    }
+
+    .mission-logo-icon {
+        font-size: 80px;
+        margin-bottom: 24px;
+    }
+
+    .mission-logo-text {
+        font-size: 32px;
+        font-weight: 800;
+    }
+
+    .mission-logo-tagline {
+        font-size: 16px;
+        opacity: 0.8;
+        margin-top: 8px;
+    }
+
+    /* Values Section */
+    .values-section {
+        padding: 100px 0;
+        background: var(--gray-100);
+    }
+
+    .values-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .values-title {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 16px;
+    }
+
+    .values-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+    }
+
+    .value-card {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 32px 24px;
+        text-align: center;
+        transition: all 0.3s;
+        border: 1px solid var(--gray-200);
+    }
+
+    .value-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+    }
+
+    .value-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    .value-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 12px;
+    }
+
+    .value-desc {
+        font-size: 14px;
+        color: var(--gray-500);
+        line-height: 1.6;
+    }
+
+    /* Team Section */
+    .team-section {
+        padding: 100px 0;
+    }
+
+    .team-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .team-title {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .team-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .team-card {
+        text-align: center;
+    }
+
+    .team-avatar {
+        width: 120px;
+        height: 120px;
+        background: var(--gradient-primary);
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        color: white;
+    }
+
+    .team-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 4px;
+    }
+
+    .team-role {
+        font-size: 14px;
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+    /* Tech Section */
+    .tech-section {
+        padding: 80px 0;
+        background: var(--dark);
+        color: var(--white);
+    }
+
+    .tech-header {
+        text-align: center;
+        margin-bottom: 48px;
+    }
+
+    .tech-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .tech-subtitle {
+        color: var(--gray-400);
+    }
+
+    .tech-grid {
+        display: flex;
+        justify-content: center;
+        gap: 60px;
+        flex-wrap: wrap;
+    }
+
+    .tech-item {
+        text-align: center;
+    }
+
+    .tech-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+
+    .tech-name {
+        font-size: 14px;
+        color: var(--gray-400);
+    }
+
+    /* Contact Section */
+    .contact-section {
+        padding: 100px 0;
+        background: linear-gradient(135deg, #F0F7FF 0%, #E8F4F8 100%);
+    }
+
+    .contact-card {
+        max-width: 600px;
+        margin: 0 auto;
+        background: var(--white);
+        border-radius: 24px;
+        padding: 48px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    }
+
+    .contact-icon {
+        font-size: 64px;
+        margin-bottom: 24px;
+    }
+
+    .contact-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 12px;
+    }
+
+    .contact-desc {
+        color: var(--gray-500);
+        margin-bottom: 32px;
+    }
+
+    .contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-size: 16px;
+        color: var(--gray-600);
+    }
+
+    .contact-item a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .contact-item a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+        .mission-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .values-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .team-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="about-hero">
+    <h1 class="about-hero-title">À propos de <span>Hyperysco</span></h1>
+    <p class="about-hero-desc">
+        Nous simplifions l'export cartographique pour les géomètres et professionnels du BTP au Maroc.
+    </p>
+</section>
+
+<!-- Mission -->
+<section class="mission-section">
+    <div class="container">
+        <div class="mission-grid">
+            <div class="mission-content">
+                <h2>Notre mission</h2>
+                <p>
+                    Hyperysco-Map est né d'un constat simple : les géomètres et professionnels 
+                    du BTP au Maroc passent trop de temps à créer manuellement des fonds de plan 
+                    pour leurs projets.
+                </p>
+                <p>
+                    Notre solution automatise ce processus en générant des fichiers DXF 
+                    professionnels avec courbes de niveau, routes, bâtiments et points de calage 
+                    Lambert Zone I Maroc — directement utilisables dans AutoCAD et Covadis.
+                </p>
+                <p>
+                    En quelques clics, obtenez un fond de plan précis de n'importe quelle zone 
+                    du Maroc, prêt pour le recalage terrain.
+                </p>
+            </div>
+            <div class="mission-visual">
+                <div class="mission-logo">
+                    <div class="mission-logo-icon">🗺️</div>
+                    <div class="mission-logo-text">Hyperysco-Map</div>
+                    <div class="mission-logo-tagline">Export DXF professionnel</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values -->
+<section class="values-section">
+    <div class="container">
+        <div class="values-header">
+            <h2 class="values-title">Nos valeurs</h2>
+        </div>
+        
+        <div class="values-grid">
+            <div class="value-card">
+                <div class="value-icon">⚡</div>
+                <h3 class="value-title">Rapidité</h3>
+                <p class="value-desc">
+                    Export en quelques secondes au lieu de plusieurs heures de travail manuel.
+                </p>
+            </div>
+            
+            <div class="value-card">
+                <div class="value-icon">🎯</div>
+                <h3 class="value-title">Précision</h3>
+                <p class="value-desc">
+                    Coordonnées Lambert Zone I Maroc certifiées, compatibles avec tool-online.com.
+                </p>
+            </div>
+            
+            <div class="value-card">
+                <div class="value-icon">🤝</div>
+                <h3 class="value-title">Simplicité</h3>
+                <p class="value-desc">
+                    Interface intuitive, aucune connaissance technique requise.
+                </p>
+            </div>
+            
+            <div class="value-card">
+                <div class="value-icon">🇲🇦</div>
+                <h3 class="value-title">Made in Morocco</h3>
+                <p class="value-desc">
+                    Développé par des ingénieurs marocains pour les professionnels marocains.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tech -->
+<section class="tech-section">
+    <div class="container">
+        <div class="tech-header">
+            <h2 class="tech-title">Technologies utilisées</h2>
+            <p class="tech-subtitle">Stack moderne pour des performances optimales</p>
+        </div>
+        
+        <div class="tech-grid">
+            <div class="tech-item">
+                <div class="tech-icon">🐍</div>
+                <div class="tech-name">Python / Flask</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">🗺️</div>
+                <div class="tech-name">OpenStreetMap</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">📐</div>
+                <div class="tech-name">ezdxf / AutoCAD</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">🌐</div>
+                <div class="tech-name">Pyproj / Lambert</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-icon">🍃</div>
+                <div class="tech-name">Leaflet.js</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact -->
+<section class="contact-section">
+    <div class="container">
+        <div class="contact-card">
+            <div class="contact-icon">📬</div>
+            <h2 class="contact-title">Contactez-nous</h2>
+            <p class="contact-desc">
+                Une question? Un partenariat? N'hésitez pas à nous contacter.
+            </p>
+            <div class="contact-info">
+                <div class="contact-item">
+                    📧 <a href="mailto:contact@hyperysco.ma">contact@hyperysco.ma</a>
+                </div>
+                <div class="contact-item">
+                    📍 Casablanca, Maroc
+                </div>
+                <div class="contact-item">
+                    🌐 <a href="https://hyperysco.ma">www.hyperysco.ma</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

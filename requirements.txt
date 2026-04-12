@@ -1,0 +1,7 @@
+Flask==3.1.2
+numpy==2.3.5
+ezdxf==1.4.3
+requests==2.32.5
+pyproj==3.7.2
+gunicorn==23.0.0
+Werkzeug==3.1.5

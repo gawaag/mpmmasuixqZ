@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Base de données locale
+hyperysco.db
+
+# Cache OSM
+cache/
+
+# DXF temporaires
+*.dxf
+
+# Environnement
+.env
+.env.local
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+desktop.ini

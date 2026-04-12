@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+
+{% block title %}Hyperysco-Map - Export DXF Topographique Professionnel{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Section */
+    .hero {
+        background: linear-gradient(135deg, #F0F7FF 0%, #E8F4F8 50%, #F0FDF4 100%);
+        padding: 80px 0 120px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(0,102,255,0.08) 0%, transparent 70%);
+    }
+
+    .hero-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 60px;
+        align-items: center;
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: 100px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--gray-600);
+        margin-bottom: 24px;
+    }
+
+    .hero-badge .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .hero-title {
+        font-size: 56px;
+        font-weight: 800;
+        line-height: 1.1;
+        color: var(--dark);
+        margin-bottom: 24px;
+    }
+
+    .hero-title span {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .hero-desc {
+        font-size: 18px;
+        color: var(--gray-500);
+        margin-bottom: 32px;
+        max-width: 500px;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 16px;
+    }
+
+    .hero-visual {
+        position: relative;
+        background: var(--white);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        padding: 20px;
+        border: 1px solid var(--gray-200);
+    }
+
+    .hero-visual-header {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+
+    .hero-visual-header span {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .hero-visual-header span:nth-child(1) { background: #EF4444; }
+    .hero-visual-header span:nth-child(2) { background: #F59E0B; }
+    .hero-visual-header span:nth-child(3) { background: #22C55E; }
+
+    .hero-visual-content {
+        background: var(--dark);
+        border-radius: 8px;
+        padding: 24px;
+        color: var(--white);
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+    }
+
+    .hero-visual-title {
+        text-align: right;
+        font-size: 12px;
+        color: var(--primary-light);
+        margin-bottom: 12px;
+    }
+
+    .code-line {
+        margin: 4px 0;
+    }
+
+    .code-comment { color: var(--gray-500); }
+    .code-key { color: var(--secondary); }
+    .code-value { color: var(--accent); }
+    .code-number { color: #F59E0B; }
+
+    /* Features Section */
+    .features {
+        padding: 100px 0;
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .section-subtitle {
+        display: inline-block;
+        background: rgba(0,102,255,0.1);
+        color: var(--primary);
+        padding: 6px 14px;
+        border-radius: 100px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 40px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 16px;
+    }
+
+    .section-desc {
+        font-size: 18px;
+        color: var(--gray-500);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+    }
+
+    .feature-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        padding: 32px;
+        transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        border-color: var(--primary-light);
+    }
+
+    .feature-icon {
+        width: 56px;
+        height: 56px;
+        background: rgba(0,102,255,0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .feature-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 12px;
+    }
+
+    .feature-desc {
+        font-size: 15px;
+        color: var(--gray-500);
+        line-height: 1.6;
+    }
+
+    /* CTA Section */
+    .cta {
+        background: var(--gradient-dark);
+        padding: 80px 0;
+        text-align: center;
+    }
+
+    .cta-title {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--white);
+        margin-bottom: 16px;
+    }
+
+    .cta-desc {
+        font-size: 18px;
+        color: var(--gray-400);
+        margin-bottom: 32px;
+    }
+
+    /* Stats */
+    .stats {
+        display: flex;
+        justify-content: center;
+        gap: 80px;
+        padding: 60px 0;
+        border-top: 1px solid var(--gray-200);
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--white);
+    }
+
+    .stat {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 48px;
+        font-weight: 800;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: var(--gray-500);
+        margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .hero-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .hero-title {
+            font-size: 36px;
+        }
+        
+        .features-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats {
+            flex-direction: column;
+            gap: 32px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-grid">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="dot"></span>
+                    Solution professionnelle pour géomètres
+                </div>
+                
+                <h1 class="hero-title">
+                    Exportez vos cartes<br>
+                    <span>au format DXF</span>
+                </h1>
+                
+                <p class="hero-desc">
+                    Générez des fichiers DXF professionnels avec courbes de niveau, 
+                    routes, bâtiments et points de calage Lambert pour AutoCAD et Covadis.
+                </p>
+                
+                <div class="hero-actions">
+                    {% if user %}
+                        <a href="{{ url_for('map_app') }}" class="btn btn-primary btn-lg">Ouvrir l'application</a>
+                    {% else %}
+                        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Commencer gratuitement</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-secondary btn-lg">Se connecter</a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <div class="hero-visual-header">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="hero-visual-title">export.dxf</div>
+                <div class="hero-visual-content">
+                    <div class="code-line"><span class="code-comment">// Croix Lambert Zone I Maroc</span></div>
+                    <div class="code-line"><span class="code-key">POINT_1:</span></div>
+                    <div class="code-line">  <span class="code-key">X:</span> <span class="code-number">367,256.123</span> <span class="code-value">m</span></div>
+                    <div class="code-line">  <span class="code-key">Y:</span> <span class="code-number">380,451.789</span> <span class="code-value">m</span></div>
+                    <div class="code-line"></div>
+                    <div class="code-line"><span class="code-comment">// Compatible Covadis</span></div>
+                    <div class="code-line"><span class="code-key">CALQUES:</span> <span class="code-value">25 layers</span></div>
+                    <div class="code-line"><span class="code-key">ENTITÉS:</span> <span class="code-number">1,247</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats -->
+<section class="stats">
+    <div class="stat">
+        <div class="stat-value">500+</div>
+        <div class="stat-label">Exports générés</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">12</div>
+        <div class="stat-label">Calques DXF</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">100%</div>
+        <div class="stat-label">Compatible AutoCAD</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">Lambert</div>
+        <div class="stat-label">Zone I Maroc</div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-subtitle">Fonctionnalités</div>
+            <h2 class="section-title">Tout ce dont vous avez besoin</h2>
+            <p class="section-desc">
+                Une solution complète pour exporter des données cartographiques 
+                professionnelles au format DXF.
+            </p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📐</div>
+                <h3 class="feature-title">Courbes de niveau</h3>
+                <p class="feature-desc">
+                    Génération automatique des courbes de niveau à partir de données 
+                    d'élévation réelles. Intervalles personnalisables.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🛣️</div>
+                <h3 class="feature-title">Réseau routier</h3>
+                <p class="feature-desc">
+                    Extraction des routes avec classification par type et 
+                    noms de rues affichés dans le DXF.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🏢</div>
+                <h3 class="feature-title">Bâtiments</h3>
+                <p class="feature-desc">
+                    Import des emprises de bâtiments depuis OpenStreetMap 
+                    avec calques dédiés.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📍</div>
+                <h3 class="feature-title">Points Lambert</h3>
+                <p class="feature-desc">
+                    Croix de calage avec coordonnées Lambert Zone I Maroc 
+                    pour recalage précis dans Covadis.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">Points personnalisés</h3>
+                <p class="feature-desc">
+                    Placez vos propres points de relevé sur la carte et 
+                    obtenez les coordonnées Lambert en temps réel.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📏</div>
+                <h3 class="feature-title">Calcul de distance</h3>
+                <p class="feature-desc">
+                    Mesure précise des distances entre points en 
+                    coordonnées Lambert (mètres).
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+    <div class="container">
+        <h2 class="cta-title">Prêt à commencer?</h2>
+        <p class="cta-desc">Créez votre compte gratuit et exportez votre première carte</p>
+        {% if user %}
+            <a href="{{ url_for('map_app') }}" class="btn btn-primary btn-lg">Accéder à l'application</a>
+        {% else %}
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Créer un compte gratuit</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

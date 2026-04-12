@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+
+{% block title %}Tarifs - Hyperysco-Map{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-hero {
+        background: linear-gradient(135deg, #F0F7FF 0%, #E8F4F8 100%);
+        padding: 80px 0;
+        text-align: center;
+    }
+
+    .pricing-title {
+        font-size: 48px;
+        font-weight: 800;
+        color: var(--dark);
+        margin-bottom: 16px;
+    }
+
+    .pricing-title span {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .pricing-subtitle {
+        font-size: 18px;
+        color: var(--gray-500);
+    }
+
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        max-width: 1100px;
+        margin: -60px auto 80px;
+        padding: 0 24px;
+    }
+
+    .pricing-card {
+        background: var(--white);
+        border-radius: 20px;
+        padding: 40px 32px;
+        border: 2px solid var(--gray-200);
+        transition: all 0.3s;
+        position: relative;
+    }
+
+    .pricing-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    }
+
+    .pricing-card.featured {
+        border-color: var(--primary);
+        transform: scale(1.05);
+    }
+
+    .pricing-card.featured:hover {
+        transform: scale(1.05) translateY(-8px);
+    }
+
+    .pricing-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #F59E0B 0%, #EAB308 100%);
+        color: white;
+        padding: 6px 16px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .pricing-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--dark);
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .pricing-price-container {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .pricing-old-price {
+        font-size: 18px;
+        color: var(--gray-400);
+        text-decoration: line-through;
+        margin-right: 8px;
+    }
+
+    .pricing-discount {
+        display: inline-block;
+        background: #FEE2E2;
+        color: #EF4444;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .pricing-price {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 4px;
+        margin-top: 8px;
+    }
+
+    .pricing-amount {
+        font-size: 56px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    .pricing-currency {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .pricing-period {
+        font-size: 16px;
+        color: var(--gray-500);
+    }
+
+    .pricing-features {
+        list-style: none;
+        margin-bottom: 32px;
+    }
+
+    .pricing-feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 15px;
+        color: var(--gray-600);
+    }
+
+    .pricing-feature:last-child {
+        border-bottom: none;
+    }
+
+    .pricing-feature-icon {
+        width: 24px;
+        height: 24px;
+        background: #DCFCE7;
+        color: #22C55E;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .pricing-feature-icon.disabled {
+        background: var(--gray-100);
+        color: var(--gray-400);
+    }
+
+    .pricing-btn {
+        width: 100%;
+        padding: 16px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        text-decoration: none;
+        display: block;
+    }
+
+    .pricing-btn-primary {
+        background: var(--gradient-primary);
+        color: var(--white);
+        border: none;
+    }
+
+    .pricing-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 102, 255, 0.3);
+    }
+
+    .pricing-btn-secondary {
+        background: var(--white);
+        color: var(--primary);
+        border: 2px solid var(--primary);
+    }
+
+    .pricing-btn-secondary:hover {
+        background: var(--primary);
+        color: var(--white);
+    }
+
+    /* FAQ Section */
+    .faq-section {
+        padding: 80px 0;
+        background: var(--white);
+    }
+
+    .faq-title {
+        font-size: 32px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 48px;
+        color: var(--dark);
+    }
+
+    .faq-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .faq-item {
+        background: var(--gray-100);
+        border-radius: 12px;
+        padding: 24px;
+    }
+
+    .faq-question {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 8px;
+    }
+
+    .faq-answer {
+        font-size: 14px;
+        color: var(--gray-500);
+        line-height: 1.6;
+    }
+
+    /* Notice */
+    .pricing-notice {
+        text-align: center;
+        padding: 40px 0;
+        background: #FEF3C7;
+        border-radius: 16px;
+        margin: 40px auto;
+        max-width: 800px;
+    }
+
+    .pricing-notice-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    .pricing-notice-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #92400E;
+        margin-bottom: 8px;
+    }
+
+    .pricing-notice-text {
+        color: #B45309;
+        font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+        .pricing-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .pricing-card.featured {
+            transform: none;
+        }
+        
+        .faq-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="pricing-hero">
+    <h1 class="pricing-title">Choisissez votre <span>Plan Premium</span></h1>
+    <p class="pricing-subtitle">Paiement unique pour 30 jours d'accès complet</p>
+</section>
+
+<!-- Pricing Cards -->
+<div class="pricing-grid">
+    <!-- Starter -->
+    <div class="pricing-card">
+        <h3 class="pricing-name">Starter</h3>
+        <div class="pricing-price-container">
+            <span class="pricing-old-price">15€</span>
+            <span class="pricing-discount">-33%</span>
+            <div class="pricing-price">
+                <span class="pricing-amount">10</span>
+                <span class="pricing-currency">€</span>
+                <span class="pricing-period">/30 jours</span>
+            </div>
+        </div>
+        <ul class="pricing-features">
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                10 exports DXF
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Courbes de niveau
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Points Lambert illimités
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Support email
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon disabled">✕</span>
+                <span style="color: var(--gray-400)">Export haute résolution</span>
+            </li>
+        </ul>
+        <a href="#" class="pricing-btn pricing-btn-secondary">Choisir Starter</a>
+    </div>
+
+    <!-- Pro -->
+    <div class="pricing-card featured">
+        <span class="pricing-badge">⭐ Recommandé</span>
+        <h3 class="pricing-name">Pro</h3>
+        <div class="pricing-price-container">
+            <span class="pricing-old-price">25€</span>
+            <span class="pricing-discount">-24%</span>
+            <div class="pricing-price">
+                <span class="pricing-amount">19</span>
+                <span class="pricing-currency">€</span>
+                <span class="pricing-period">/30 jours</span>
+            </div>
+        </div>
+        <ul class="pricing-features">
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                50 exports DXF
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Courbes de niveau HD
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Points Lambert illimités
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Support prioritaire
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Export haute résolution
+            </li>
+        </ul>
+        <a href="#" class="pricing-btn pricing-btn-primary">Choisir Pro</a>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="pricing-card">
+        <h3 class="pricing-name">Enterprise</h3>
+        <div class="pricing-price-container">
+            <span class="pricing-old-price">45€</span>
+            <span class="pricing-discount">-22%</span>
+            <div class="pricing-price">
+                <span class="pricing-amount">35</span>
+                <span class="pricing-currency">€</span>
+                <span class="pricing-period">/30 jours</span>
+            </div>
+        </div>
+        <ul class="pricing-features">
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Exports illimités
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Toutes fonctionnalités
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                API privée
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Support téléphone
+            </li>
+            <li class="pricing-feature">
+                <span class="pricing-feature-icon">✓</span>
+                Formation incluse
+            </li>
+        </ul>
+        <a href="#" class="pricing-btn pricing-btn-secondary">Choisir Enterprise</a>
+    </div>
+</div>
+
+<!-- Notice -->
+<div class="container">
+    <div class="pricing-notice">
+        <div class="pricing-notice-icon">🚧</div>
+        <div class="pricing-notice-title">Système de paiement en cours d'installation</div>
+        <div class="pricing-notice-text">
+            Les paiements ne sont pas encore activés. Contactez-nous pour activer votre compte Premium.
+        </div>
+    </div>
+</div>
+
+<!-- FAQ -->
+<section class="faq-section">
+    <div class="container">
+        <h2 class="faq-title">Questions fréquentes</h2>
+        
+        <div class="faq-grid">
+            <div class="faq-item">
+                <div class="faq-question">Quel format de fichier est exporté?</div>
+                <div class="faq-answer">
+                    Les fichiers sont exportés au format DXF R2004, compatible avec AutoCAD, 
+                    DraftSight, Covadis et la plupart des logiciels CAO.
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Quelle projection est utilisée?</div>
+                <div class="faq-answer">
+                    Les coordonnées Lambert Zone I Maroc (Merchich) sont affichées pour le 
+                    recalage dans Covadis. Le dessin utilise des coordonnées locales en mètres.
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">D'où viennent les données?</div>
+                <div class="faq-answer">
+                    Les données proviennent d'OpenStreetMap pour les routes et bâtiments, 
+                    et d'Open-Elevation pour les courbes de niveau.
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Puis-je essayer gratuitement?</div>
+                <div class="faq-answer">
+                    Oui! Créez un compte gratuit pour tester l'application avec un nombre 
+                    limité d'exports par mois.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
