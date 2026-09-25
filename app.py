@@ -115,9 +115,16 @@ def get_current_user():
 # ============================================================
 
 OVERPASS_SERVERS = [
-    "https://overpass.kumi.systems/api/interpreter",
     "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
+
+# Les serveurs Overpass rejettent (406/429) les requêtes sans User-Agent identifiable
+OVERPASS_HEADERS = {
+    "User-Agent": "HyperyscoMap/1.0 (contact: elhch@hyperysco.ma)",
+    "Accept": "application/json",
+}
 
 # Couleurs AutoCAD ACI
 COLORS = {
@@ -296,15 +303,22 @@ def fetch_osm_data(bbox, layer_type):
     # Essayer les serveurs
     for server in OVERPASS_SERVERS:
         try:
-            response = requests.get(
-                server,
-                params={'data': query},
-                timeout=90
-            )
+            for attempt in range(3):
+                response = requests.post(
+                    server,
+                    data={'data': query},
+                    headers=OVERPASS_HEADERS,
+                    timeout=90
+                )
+                if response.status_code != 429:
+                    break
+                time.sleep(3 * (attempt + 1))
             if response.status_code == 200:
                 data = response.json()
                 return parse_osm_elements(data.get('elements', []), layer_type)
+            print(f"    Overpass {server} -> HTTP {response.status_code} ({layer_type})")
         except Exception as e:
+            print(f"    Overpass {server} -> erreur {e} ({layer_type})")
             continue
     
     return []
