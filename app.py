@@ -1285,7 +1285,7 @@ UTILISATION COVADIS:
 # EXPORT AVEC MAQUETTE (MAP PLUS)
 # ============================================================
 
-def create_dxf_with_maquette(data, filepath, cartouche, lambert_extents, show_road_labels=True):
+def create_dxf_with_maquette(data, filepath, cartouche, lambert_extents, show_road_labels=True, before_save=None):
     """
     Crée un fichier DXF en utilisant la MAQUETTE comme base (INTOUCHABLE).
     
@@ -1733,6 +1733,9 @@ def create_dxf_with_maquette(data, filepath, cartouche, lambert_extents, show_ro
     except Exception as e:
         print(f"  Note cartouche: {e}")
     
+    if before_save:
+        before_save(doc)
+    
     # Sauvegarder
     doc.saveas(filepath)
     
@@ -2109,7 +2112,7 @@ def create_dxf_with_template(data, filepath, cartouche):
 
 
 @app.route('/api/download-with-template', methods=['POST'])
-def download_with_template(payload=None):
+def download_with_template(payload=None, before_save=None):
     """Export avec maquette professionnelle - coordonnées Lambert directes"""
     try:
         start_time = time.time()
@@ -2473,7 +2476,7 @@ def download_with_template(payload=None):
             dxf_path = os.path.join(tmpdir, 'export_maquette.dxf')
             
             # Utiliser la nouvelle fonction avec maquette
-            entity_count = create_dxf_with_maquette(all_data, dxf_path, cartouche, lambert_extents, show_road_labels)
+            entity_count = create_dxf_with_maquette(all_data, dxf_path, cartouche, lambert_extents, show_road_labels, before_save)
             print(f"  → {entity_count} entités")
             
             # ZIP
@@ -2637,7 +2640,8 @@ def add_mapplus3_troncons(doc, troncons, transformer_lambert):
             if color_hex in MAPPLUS3_ACI:
                 attribs['color'] = MAPPLUS3_ACI[color_hex]
             else:
-                attribs['true_color'] = dxf_colors.rgb2int(dxf_colors.hex2rgb(color_hex))
+                rgb = tuple(int(color_hex[k:k + 2], 16) for k in (1, 3, 5))
+                attribs['true_color'] = dxf_colors.rgb2int(rgb)
 
             msp.add_lwpolyline(coords, dxfattribs=attribs)
 
@@ -2678,42 +2682,18 @@ def download_mapplus3():
     try:
         data = request.get_json() or {}
         troncons = data.get('troncons', [])
+        transformer_lambert = get_lambert_transformer()
 
-        response = download_with_template(dict(data, troncons=[]))
-        if isinstance(response, tuple):
-            return response
-        response.direct_passthrough = False
-        base_zip = response.get_data()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dxf_path = os.path.join(tmpdir, 'plan_avec_maquette.dxf')
-            with zipfile.ZipFile(BytesIO(base_zip)) as zf:
-                info = zf.read('INFO.txt').decode('utf-8')
-                with open(dxf_path, 'wb') as f:
-                    f.write(zf.read('plan_avec_maquette.dxf'))
-
+        def add_traces(doc):
             if troncons:
                 print(f"\n[MAP PLUS 3] Ajout de {len(troncons)} tracé(s)")
-                doc = ezdxf.readfile(dxf_path)
-                add_mapplus3_troncons(doc, troncons, get_lambert_transformer())
-                doc.saveas(dxf_path)
+                add_mapplus3_troncons(doc, troncons, transformer_lambert)
 
-            out = BytesIO()
-            with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.write(dxf_path, 'plan_avec_maquette.dxf')
-                zf.writestr('INFO.txt', info + "\nTracés: point de départ en BLEU, point d'arrivée en VERT (calques CABLES_DEPART / CABLES_ARRIVEE)\n")
-            out.seek(0)
-
-        return send_file(
-            out,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name='hyperysco_maquette_plus3.zip'
-        )
+        return download_with_template(dict(data, troncons=[]), before_save=add_traces)
 
     except Exception as e:
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f"{type(e).__name__}: {e}"}), 500
 
 
 # ============================================================

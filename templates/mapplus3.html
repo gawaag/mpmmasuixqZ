@@ -1155,6 +1155,20 @@
             margin-left: 6px;
         }
 
+        .saisie-grid input.troncon-color-picker,
+        .troncon-color-picker {
+            flex: 0 0 26px;
+            width: 26px;
+            height: 22px;
+            padding: 0;
+            margin-left: 4px;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            background: #0f172a;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
         .troncon-color-select {
             margin-top: 4px;
             padding: 2px 4px;
@@ -1805,28 +1819,54 @@
         let tronconIdCounter = 0;
         
         // Palette proposée dans les listes déroulantes (hex reconnus par l'export DXF)
+        // Bleu (#3b82f6) et vert (#22c55e) purs sont réservés aux points départ / arrivée
         const COLOR_PALETTE = [
             { hex: '#ef4444', name: 'Rouge' },
+            { hex: '#b91c1c', name: 'Rouge foncé' },
+            { hex: '#7f1d1d', name: 'Bordeaux' },
+            { hex: '#fb7185', name: 'Saumon' },
             { hex: '#f97316', name: 'Orange' },
+            { hex: '#c2410c', name: 'Orange brûlé' },
+            { hex: '#f59e0b', name: 'Ambre' },
             { hex: '#eab308', name: 'Jaune' },
+            { hex: '#ca8a04', name: 'Or' },
+            { hex: '#d6b88f', name: 'Beige' },
+            { hex: '#92400e', name: 'Marron' },
+            { hex: '#65a30d', name: 'Olive' },
             { hex: '#84cc16', name: 'Vert lime' },
+            { hex: '#15803d', name: 'Vert forêt' },
+            { hex: '#10b981', name: 'Émeraude' },
             { hex: '#14b8a6', name: 'Turquoise' },
+            { hex: '#0f766e', name: 'Sarcelle' },
             { hex: '#06b6d4', name: 'Cyan' },
             { hex: '#0ea5e9', name: 'Bleu ciel' },
+            { hex: '#1e3a8a', name: 'Bleu marine' },
             { hex: '#6366f1', name: 'Indigo' },
             { hex: '#8b5cf6', name: 'Violet' },
             { hex: '#a855f7', name: 'Pourpre' },
+            { hex: '#6b21a8', name: 'Prune' },
             { hex: '#d946ef', name: 'Fuchsia' },
+            { hex: '#c026d3', name: 'Magenta' },
             { hex: '#ec4899', name: 'Rose' },
+            { hex: '#f9a8d4', name: 'Rose pâle' },
+            { hex: '#9ca3af', name: 'Gris' },
+            { hex: '#4b5563', name: 'Gris foncé' },
             { hex: '#ffffff', name: 'Blanc / Noir' }
         ];
-        // Bleu et vert sont réservés aux points départ / arrivée
-        const TRONCON_COLORS = COLOR_PALETTE.map(c => c.hex);
+        // Ordre d'attribution automatique : couleurs bien distinctes d'un tracé au suivant
+        const TRONCON_COLORS = [
+            '#ef4444', '#f97316', '#eab308', '#84cc16', '#14b8a6', '#0ea5e9', '#6366f1', '#a855f7',
+            '#ec4899', '#92400e', '#1e3a8a', '#15803d', '#c026d3', '#ca8a04', '#0f766e', '#7f1d1d',
+            '#fb7185', '#65a30d', '#6b21a8', '#4b5563'
+        ];
         const START_COLOR = '#3b82f6';
         const END_COLOR = '#22c55e';
 
         function colorOptionsHtml(selected) {
-            return COLOR_PALETTE.map(c =>
+            const custom = COLOR_PALETTE.some(c => c.hex === selected)
+                ? ''
+                : `<option value="${selected}" selected style="color: ${selected};">■ Personnalisée (${selected})</option>`;
+            return custom + COLOR_PALETTE.map(c =>
                 `<option value="${c.hex}" ${c.hex === selected ? 'selected' : ''} style="color: ${c.hex};">■ ${c.name}</option>`
             ).join('');
         }
@@ -1905,6 +1945,7 @@
                         <select class="troncon-color-select" onchange="changeTronconColor(${t.id}, this.value)">
                             ${colorOptionsHtml(t.color)}
                         </select>
+                        <input type="color" class="troncon-color-picker" value="${t.color}" title="Autre couleur" onchange="changeTronconColor(${t.id}, this.value)">
                     </div>
                     <button class="repere-item-delete" onclick="deleteTroncon(${t.id})">✖</button>
                 </div>
@@ -2446,7 +2487,10 @@
                 gridColumns.forEach((col, c) => {
                     const attrs = `data-row="${r}" data-col="${c}"`;
                     if (row.type === 'color') {
-                        html += `<td><select ${attrs} style="color: ${col.color};">${colorOptionsHtml(col.color)}</select></td>`;
+                        html += `<td><div style="display: flex;">
+                            <select ${attrs} style="color: ${col.color};">${colorOptionsHtml(col.color)}</select>
+                            <input type="color" class="troncon-color-picker" ${attrs} value="${col.color}" title="Autre couleur">
+                        </div></td>`;
                     } else if (row.type === 'suivi') {
                         html += `<td><select ${attrs}>${SUIVI_OPTIONS.map(o =>
                             `<option value="${o.value}" ${o.value === col.suivi ? 'selected' : ''}>${o.label}</option>`).join('')}</select></td>`;
@@ -2481,7 +2525,7 @@
             while (gridColumns.length <= c) gridColumns.push(newGridColumn(gridColumns.length));
             const col = gridColumns[c];
             if (rowKey === 'color') {
-                col.color = matchColor(value) || col.color;
+                col.color = matchColor(value) || (/^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim().toLowerCase() : col.color);
             } else if (rowKey === 'suivi') {
                 col.suivi = matchSuivi(value);
             } else {
@@ -2508,7 +2552,7 @@
         });
         
         saisieGrid?.addEventListener('change', (e) => {
-            if (e.target.tagName !== 'SELECT') return;
+            if (e.target.tagName !== 'SELECT' && e.target.type !== 'color') return;
             const r = e.target.dataset.row, c = parseInt(e.target.dataset.col);
             setGridCell(c, GRID_ROWS[r].key, e.target.value);
             const col = gridColumns[c];
@@ -3207,8 +3251,15 @@
                 });
                 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Erreur serveur');
+                    const text = await response.text();
+                    let message = `Erreur serveur ${response.status}`;
+                    try {
+                        message += ' : ' + (JSON.parse(text).error || '');
+                    } catch (e) {
+                        message += ' (réponse non JSON, voir console)';
+                        console.error('Réponse export:', text.substring(0, 2000));
+                    }
+                    throw new Error(message);
                 }
                 
                 // Télécharger
@@ -3227,6 +3278,7 @@
                 
             } catch (err) {
                 hideLoading();
+                console.error('Export Map Plus 3:', err);
                 showToast(err.message || 'Erreur', 'error');
             }
         });
