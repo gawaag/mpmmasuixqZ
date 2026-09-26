@@ -336,6 +336,7 @@
                 <div class="user-menu">
                     <a href="{{ url_for('map_app') }}" class="btn btn-secondary">Export Standard</a>
                     <a href="{{ url_for('mapplus') }}" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">⚡ Map Plus</a>
+                    <a href="{{ url_for('mapplus3') }}" class="btn btn-primary" style="background: linear-gradient(135deg, #3b82f6, #22c55e);">🛣️ Map Plus 3</a>
                     <div class="user-avatar">{{ user.username[0] }}</div>
                     <span class="user-name">{{ user.username }}</span>
                     <span class="plan-badge {% if user.plan == 'free' %}free{% endif %}">{{ user.plan }}</span>

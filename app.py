@@ -12,6 +12,7 @@ import zipfile
 import traceback
 import ezdxf
 from ezdxf import units
+from ezdxf import colors as dxf_colors
 import time
 import requests
 from io import BytesIO
@@ -960,6 +961,13 @@ def mapplus():
     """Map Plus - Export avec maquette professionnelle"""
     user = get_current_user()
     return render_template('mapplus.html', user=user)
+
+@app.route('/mapplus3')
+@login_required
+def mapplus3():
+    """Map Plus 3 - Tracés suivant la route, saisie en tableau, couleurs par tracé"""
+    user = get_current_user()
+    return render_template('mapplus3.html', user=user)
 
 @app.route('/dashboard')
 @login_required
@@ -2101,11 +2109,11 @@ def create_dxf_with_template(data, filepath, cartouche):
 
 
 @app.route('/api/download-with-template', methods=['POST'])
-def download_with_template():
+def download_with_template(payload=None):
     """Export avec maquette professionnelle - coordonnées Lambert directes"""
     try:
         start_time = time.time()
-        data = request.get_json()
+        data = payload if payload is not None else request.get_json()
         
         bbox = data.get('bbox')
         layers = data.get('layers', ['roads'])
@@ -2513,6 +2521,196 @@ Par: Hyperysco-Map Plus
                 download_name='hyperysco_maquette.zip'
             )
     
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================
+# MAP PLUS 3 - ITINÉRAIRES ET TRACÉS COLORÉS
+# ============================================================
+
+OSRM_SERVERS = {
+    'driving': [
+        "https://router.project-osrm.org/route/v1/driving",
+        "https://routing.openstreetmap.de/routed-car/route/v1/driving",
+    ],
+    'foot': [
+        "https://routing.openstreetmap.de/routed-foot/route/v1/driving",
+    ],
+}
+
+MAPPLUS3_ACI = {
+    '#ef4444': 1,   # Rouge
+    '#f97316': 30,  # Orange
+    '#eab308': 2,   # Jaune
+    '#84cc16': 82,  # Vert lime
+    '#14b8a6': 134, # Turquoise
+    '#06b6d4': 4,   # Cyan
+    '#0ea5e9': 150, # Bleu ciel
+    '#6366f1': 170, # Indigo
+    '#8b5cf6': 6,   # Violet
+    '#a855f7': 200, # Pourpre
+    '#d946ef': 201, # Fuchsia
+    '#ec4899': 211, # Rose
+    '#ffffff': 7,   # Blanc / Noir
+    '#22c55e': 3,   # Vert
+    '#3b82f6': 5,   # Bleu
+}
+
+ACI_DEPART = 5   # Bleu
+ACI_ARRIVEE = 3  # Vert
+
+
+@app.route('/api/route', methods=['POST'])
+def route_between_points():
+    """Itinéraire routier passant par les points donnés (A, [étapes], B)"""
+    data = request.get_json() or {}
+    points = data.get('points', [])
+    profile = data.get('profile', 'driving')
+
+    if len(points) < 2:
+        return jsonify({'error': 'Au moins 2 points requis'}), 400
+    if len(points) > 25:
+        # Garder départ, arrivée et des étapes réparties
+        step = (len(points) - 1) / 24
+        points = [points[round(i * step)] for i in range(25)]
+
+    coords = ';'.join(f"{float(p['lon']):.6f},{float(p['lat']):.6f}" for p in points)
+
+    for server in OSRM_SERVERS.get(profile, OSRM_SERVERS['driving']):
+        try:
+            response = requests.get(
+                f"{server}/{coords}",
+                params={'overview': 'full', 'geometries': 'geojson'},
+                headers=OVERPASS_HEADERS,
+                timeout=30
+            )
+            if response.status_code != 200:
+                print(f"    OSRM {server} -> HTTP {response.status_code}")
+                continue
+            result = response.json()
+            if result.get('code') != 'Ok' or not result.get('routes'):
+                continue
+            route = result['routes'][0]
+            path = [[lat, lon] for lon, lat in route['geometry']['coordinates']]
+            return jsonify({'path': path, 'distance': route.get('distance', 0)})
+        except Exception as e:
+            print(f"    OSRM {server} -> erreur {e}")
+
+    return jsonify({'error': 'Aucun itinéraire trouvé entre ces points'}), 502
+
+
+def _point_along(coords, ratio):
+    """Point situé à `ratio` de la longueur d'une polyligne"""
+    lengths = [math.dist(coords[i - 1], coords[i]) for i in range(1, len(coords))]
+    target = sum(lengths) * ratio
+    for i, seg in enumerate(lengths):
+        if target <= seg and seg > 0:
+            t = target / seg
+            (x1, y1), (x2, y2) = coords[i], coords[i + 1]
+            return (x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)
+        target -= seg
+    return coords[-1]
+
+
+def add_mapplus3_troncons(doc, troncons, transformer_lambert):
+    """Ajoute les tracés (chemin complet, couleur choisie, départ bleu / arrivée vert)"""
+    msp = doc.modelspace()
+
+    for name, color in (('CABLES', 1), ('CABLES_TEXT', 7), ('CABLES_DEPART', ACI_DEPART), ('CABLES_ARRIVEE', ACI_ARRIVEE)):
+        if name not in doc.layers:
+            doc.layers.add(name, color=color)
+
+    count = 0
+    for i, troncon in enumerate(troncons):
+        try:
+            path = troncon.get('path') or [troncon['debut'], troncon['arrivee']]
+            coords = [transformer_lambert.transform(p['lon'], p['lat']) for p in path]
+            coords = [(round(x, 2), round(y, 2)) for x, y in coords]
+            if len(coords) < 2:
+                continue
+
+            ml = troncon.get('ml', 0)
+            color_hex = str(troncon.get('color', '#ef4444')).lower()
+            attribs = {'layer': 'CABLES'}
+            if color_hex in MAPPLUS3_ACI:
+                attribs['color'] = MAPPLUS3_ACI[color_hex]
+            else:
+                attribs['true_color'] = dxf_colors.rgb2int(dxf_colors.hex2rgb(color_hex))
+
+            msp.add_lwpolyline(coords, dxfattribs=attribs)
+
+            (x1, y1), (x2, y2) = coords[0], coords[-1]
+            for (x, y), layer, aci in (((x1, y1), 'CABLES_DEPART', ACI_DEPART), ((x2, y2), 'CABLES_ARRIVEE', ACI_ARRIVEE)):
+                msp.add_circle((x, y), radius=2, dxfattribs={'layer': layer, 'color': aci})
+                hatch = msp.add_hatch(color=aci, dxfattribs={'layer': layer})
+                hatch.paths.add_edge_path().add_arc((x, y), radius=2, start_angle=0, end_angle=360)
+
+            if ml:
+                mid_x, mid_y = _point_along(coords, 0.5)
+                text_attribs = {'layer': 'CABLES_TEXT', 'height': 3.0, 'style': 'LABELS'}
+                text_attribs.update({k: v for k, v in attribs.items() if k != 'layer'})
+                msp.add_text(f"{ml}m", dxfattribs=text_attribs).set_placement((mid_x + 1, mid_y + 1))
+
+            nom_debut = f"{ml}m-DEB" if ml else f"T{i+1}-DEB"
+            nom_arrivee = f"{ml}m-ARR" if ml else f"T{i+1}-ARR"
+            msp.add_text(
+                nom_debut,
+                dxfattribs={'layer': 'CABLES_TEXT', 'height': 2.0, 'color': ACI_DEPART, 'style': 'LABELS'}
+            ).set_placement((x1 + 3, y1 + 3))
+            msp.add_text(
+                nom_arrivee,
+                dxfattribs={'layer': 'CABLES_TEXT', 'height': 2.0, 'color': ACI_ARRIVEE, 'style': 'LABELS'}
+            ).set_placement((x2 + 3, y2 + 3))
+
+            count += 1
+            print(f"  📡 Tracé {nom_debut} → {nom_arrivee}: {len(coords)} points, couleur {color_hex}")
+        except Exception as e:
+            print(f"  Erreur tracé {i}: {e}")
+
+    return count
+
+
+@app.route('/api/download-mapplus3', methods=['POST'])
+def download_mapplus3():
+    """Export Map Plus 3 : maquette Map Plus + tracés avec chemin complet et couleurs"""
+    try:
+        data = request.get_json() or {}
+        troncons = data.get('troncons', [])
+
+        response = download_with_template(dict(data, troncons=[]))
+        if isinstance(response, tuple):
+            return response
+        response.direct_passthrough = False
+        base_zip = response.get_data()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dxf_path = os.path.join(tmpdir, 'plan_avec_maquette.dxf')
+            with zipfile.ZipFile(BytesIO(base_zip)) as zf:
+                info = zf.read('INFO.txt').decode('utf-8')
+                with open(dxf_path, 'wb') as f:
+                    f.write(zf.read('plan_avec_maquette.dxf'))
+
+            if troncons:
+                print(f"\n[MAP PLUS 3] Ajout de {len(troncons)} tracé(s)")
+                doc = ezdxf.readfile(dxf_path)
+                add_mapplus3_troncons(doc, troncons, get_lambert_transformer())
+                doc.saveas(dxf_path)
+
+            out = BytesIO()
+            with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.write(dxf_path, 'plan_avec_maquette.dxf')
+                zf.writestr('INFO.txt', info + "\nTracés: point de départ en BLEU, point d'arrivée en VERT (calques CABLES_DEPART / CABLES_ARRIVEE)\n")
+            out.seek(0)
+
+        return send_file(
+            out,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='hyperysco_maquette_plus3.zip'
+        )
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
