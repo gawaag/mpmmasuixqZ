@@ -2677,11 +2677,22 @@ def _point_along(coords, ratio):
     return coords[-1]
 
 
-def add_mapplus3_troncons(doc, troncons, transformer_lambert):
-    """Ajoute les tracés (chemin complet, couleur choisie, départ bleu / arrivée vert)"""
-    msp = doc.modelspace()
+def _sanitize_layer_name(name, fallback='TRACE'):
+    cleaned = ''.join(ch if ch.isalnum() else '_' for ch in str(name or ''))
+    cleaned = cleaned.strip('_')[:20].upper()
+    return f"CABLES_{cleaned or fallback}"
 
-    for name, color in (('CABLES', 1), ('CABLES_TEXT', 7), ('CABLES_DEPART', ACI_DEPART), ('CABLES_ARRIVEE', ACI_ARRIVEE)):
+
+def add_mapplus3_troncons(doc, troncons, transformer_lambert):
+    """Ajoute les tracés (chemin, couleur, épaisseur, étiquettes de points, départ bleu / arrivée vert)"""
+    msp = doc.modelspace()
+    try:
+        doc.header['$LWDISPLAY'] = 1
+    except Exception:
+        pass
+
+    for name, color in (('CABLES', 1), ('CABLES_TEXT', 7), ('CABLES_POINTS', 7),
+                        ('CABLES_DEPART', ACI_DEPART), ('CABLES_ARRIVEE', ACI_ARRIVEE)):
         if name not in doc.layers:
             doc.layers.add(name, color=color)
 
@@ -2695,15 +2706,25 @@ def add_mapplus3_troncons(doc, troncons, transformer_lambert):
                 continue
 
             ml = troncon.get('ml', 0)
+            description = troncon.get('description', f'Troncon {i+1}')
             color_hex = str(troncon.get('color', '#ef4444')).lower()
-            attribs = {'layer': 'CABLES'}
+            lineweight_mm = float(troncon.get('lineweight', 0.35) or 0.35)
+            lineweight_mm = min(2.11, max(0.13, lineweight_mm))
+            lw = int(round(lineweight_mm * 100))
+
+            layer_name = _sanitize_layer_name(description, f'T{i+1}')
+            if layer_name not in doc.layers:
+                doc.layers.add(layer_name, color=1)
+
+            attribs = {'layer': layer_name, 'lineweight': lw}
             if color_hex in MAPPLUS3_ACI:
                 attribs['color'] = MAPPLUS3_ACI[color_hex]
             else:
                 rgb = tuple(int(color_hex[k:k + 2], 16) for k in (1, 3, 5))
                 attribs['true_color'] = dxf_colors.rgb2int(rgb)
 
-            msp.add_lwpolyline(coords, dxfattribs=attribs)
+            polyline = msp.add_lwpolyline(coords, dxfattribs=attribs)
+            polyline.dxf.const_width = lineweight_mm * 2.0
 
             (x1, y1), (x2, y2) = coords[0], coords[-1]
             for (x, y), layer, aci in (((x1, y1), 'CABLES_DEPART', ACI_DEPART), ((x2, y2), 'CABLES_ARRIVEE', ACI_ARRIVEE)):
@@ -2711,11 +2732,11 @@ def add_mapplus3_troncons(doc, troncons, transformer_lambert):
                 hatch = msp.add_hatch(color=aci, dxfattribs={'layer': layer})
                 hatch.paths.add_edge_path().add_arc((x, y), radius=2, start_angle=0, end_angle=360)
 
-            if ml:
-                mid_x, mid_y = _point_along(coords, 0.5)
-                text_attribs = {'layer': 'CABLES_TEXT', 'height': 3.0, 'style': 'LABELS'}
-                text_attribs.update({k: v for k, v in attribs.items() if k != 'layer'})
-                msp.add_text(f"{ml}m", dxfattribs=text_attribs).set_placement((mid_x + 1, mid_y + 1))
+            mid_x, mid_y = _point_along(coords, 0.5)
+            label_ml = f"{description} {ml}m" if ml else description
+            text_attribs = {'layer': 'CABLES_TEXT', 'height': 3.0, 'style': 'LABELS'}
+            text_attribs.update({k: v for k, v in attribs.items() if k not in ('layer', 'lineweight')})
+            msp.add_text(label_ml[:40], dxfattribs=text_attribs).set_placement((mid_x + 1, mid_y + 1))
 
             nom_debut = f"{ml}m-DEB" if ml else f"T{i+1}-DEB"
             nom_arrivee = f"{ml}m-ARR" if ml else f"T{i+1}-ARR"
@@ -2728,8 +2749,24 @@ def add_mapplus3_troncons(doc, troncons, transformer_lambert):
                 dxfattribs={'layer': 'CABLES_TEXT', 'height': 2.0, 'color': ACI_ARRIVEE, 'style': 'LABELS'}
             ).set_placement((x2 + 3, y2 + 3))
 
+            for point in troncon.get('point_labels') or []:
+                label = str(point.get('label') or '').strip()
+                if not label or point.get('lat') is None or point.get('lon') is None:
+                    continue
+                px, py = transformer_lambert.transform(point['lon'], point['lat'])
+                point_attribs = {'layer': 'CABLES_POINTS'}
+                if 'color' in attribs:
+                    point_attribs['color'] = attribs['color']
+                if 'true_color' in attribs:
+                    point_attribs['true_color'] = attribs['true_color']
+                msp.add_circle((px, py), radius=1.2, dxfattribs=point_attribs)
+                msp.add_text(
+                    label[:30],
+                    dxfattribs={**point_attribs, 'height': 2.5, 'style': 'LABELS'}
+                ).set_placement((px + 2.5, py + 2.5))
+
             count += 1
-            print(f"  📡 Tracé {nom_debut} → {nom_arrivee}: {len(coords)} points, couleur {color_hex}")
+            print(f"  📡 Tracé {description}: {nom_debut} → {nom_arrivee}, {len(coords)} pts, {lineweight_mm:.2f}mm, calque {layer_name}")
         except Exception as e:
             print(f"  Erreur tracé {i}: {e}")
 

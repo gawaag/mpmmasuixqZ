@@ -1445,6 +1445,21 @@
                             </div>
                         </div>
                         
+                        <div style="margin-bottom: 10px;">
+                            <label style="font-size: 10px; color: #94a3b8; display: block; margin-bottom: 4px;">Épaisseur du tracé (AutoCAD)</label>
+                            <select id="defaultLineweight" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 12px;">
+                                <option value="0.18">0.18 mm — fine</option>
+                                <option value="0.25">0.25 mm</option>
+                                <option value="0.35" selected>0.35 mm — normale</option>
+                                <option value="0.50">0.50 mm</option>
+                                <option value="0.70">0.70 mm — épaisse</option>
+                                <option value="1.00">1.00 mm — très épaisse</option>
+                            </select>
+                            <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
+                                S'applique aux nouveaux tracés. Modifiable ensuite dans la liste, ou à l'export.
+                            </div>
+                        </div>
+                        
                         <!-- Mode Tableau -->
                         <div id="modeGrid">
                             <div class="grid-panel" id="gridPanel">
@@ -1548,12 +1563,20 @@
                                     Cliquez sur la carte pour placer les points de votre itinéraire. Les points seront reliés dans l'ordre.
                                 </p>
                                 <div style="display: flex; gap: 4px; margin-bottom: 8px;">
-                                    <input type="text" id="pointsDesc" placeholder="Description" style="flex: 2; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    <input type="text" id="pointsDesc" placeholder="Description du tracé (ex: PCOCO)" style="flex: 2; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
                                     <input type="number" id="pointsML" placeholder="ML (m)" style="flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <label style="font-size: 10px; color: #94a3b8; display: block; margin-bottom: 4px;">Étiquette du prochain point</label>
+                                    <input type="text" id="pointLabelInput" placeholder="P1 — laissez vide pour automatique" style="width: 100%; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                                    <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
+                                        Tapez un nom (chambre, regard…) puis cliquez sur la carte. Vide = P1, P2, P3…
+                                    </div>
                                 </div>
                                 <div id="pointsStatus" style="font-size: 10px; color: #64748b; margin-bottom: 8px; padding: 4px; background: #0f172a; border-radius: 4px;">
                                     Points: <span id="pointsCounter">0</span> | Cliquez pour ajouter
                                 </div>
+                                <div id="pointsLabelsList" style="display: none; max-height: 140px; overflow-y: auto; margin-bottom: 8px;"></div>
                                 <button id="startPointsMode" class="repere-btn primary" style="width: 100%;">
                                     📍 Commencer le tracé
                                 </button>
@@ -1680,6 +1703,18 @@
                             <input type="number" id="contourInterval" value="10" min="1" max="100" style="width: 80px;">
                             <span style="color: #64748b; font-size: 12px;">mètres</span>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Épaisseur des tracés à l'export</label>
+                        <select id="exportLineweight" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 12px;">
+                            <option value="" selected>Garder l'épaisseur de chaque tracé</option>
+                            <option value="0.18">0.18 mm — fine (tous les tracés)</option>
+                            <option value="0.25">0.25 mm (tous les tracés)</option>
+                            <option value="0.35">0.35 mm — normale (tous les tracés)</option>
+                            <option value="0.50">0.50 mm (tous les tracés)</option>
+                            <option value="0.70">0.70 mm — épaisse (tous les tracés)</option>
+                            <option value="1.00">1.00 mm — très épaisse (tous les tracés)</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -2078,6 +2113,9 @@
                             ${colorOptionsHtml(t.color)}
                         </select>
                         <input type="color" class="troncon-color-picker" value="${t.color}" title="Autre couleur" onchange="changeTronconColor(${t.id}, this.value)">
+                        <select class="troncon-color-select" onchange="changeTronconLineweight(${t.id}, this.value)" title="Épaisseur du tracé">
+                            ${lineweightOptionsHtml(t.lineweight || 0.35)}
+                        </select>
                     </div>
                     <button class="repere-item-delete" onclick="deleteTroncon(${t.id})">✖</button>
                 </div>
@@ -2093,6 +2131,17 @@
             `).join('');
         }
         
+        window.changeTronconLineweight = function(id, value) {
+            const troncon = state.troncons.find(t => t.id === id);
+            if (!troncon) return;
+            troncon.lineweight = parseFloat(value) || 0.35;
+            tronconsLayerGroup.eachLayer(layer => {
+                if (layer.tronconId === id && layer.isTronconLine) {
+                    layer.setStyle({ weight: mapLineWeight(troncon.lineweight) });
+                }
+            });
+        };
+
         window.changeTronconColor = function(id, color) {
             const troncon = state.troncons.find(t => t.id === id);
             if (!troncon) return;
@@ -2326,13 +2375,38 @@
         // ============================================================
         let isPointsMode = false;
         let currentPointsPath = [];
+        let currentPointLabels = [];
         let pointsPolyline = null;
         let pointsMarkers = [];
         let pointsLayer = L.layerGroup().addTo(map);
         
+        function getDefaultLineweight() {
+            return parseFloat(document.getElementById('defaultLineweight')?.value) || 0.35;
+        }
+        
+        function lineweightOptionsHtml(selected) {
+            return [0.18, 0.25, 0.35, 0.50, 0.70, 1.00].map(v =>
+                `<option value="${v}" ${Number(selected) === v ? 'selected' : ''}>${v.toFixed(2)} mm</option>`
+            ).join('');
+        }
+        
+        function mapLineWeight(mm) {
+            return Math.max(3, Math.round(2 + Number(mm) * 8));
+        }
+        
+        function pointLabelIcon(text) {
+            return L.divIcon({
+                html: `<div style="background: #0f172a; color: #eab308; border: 1px solid #eab308; padding: 1px 5px; border-radius: 8px; font-size: 10px; font-weight: 700; white-space: nowrap;">${escapeHtml(text)}</div>`,
+                className: 'point-label-icon',
+                iconSize: [70, 18],
+                iconAnchor: [35, 22]
+            });
+        }
+        
         function stopPointsMode() {
             isPointsMode = false;
             currentPointsPath = [];
+            currentPointLabels = [];
             pointsMarkers = [];
             pointsLayer.clearLayers();
             map.getContainer().style.cursor = '';
@@ -2342,12 +2416,17 @@
             document.getElementById('cancelPointsMode').style.display = 'none';
             document.getElementById('pointsCounter').textContent = '0';
             document.getElementById('pointsTotal').textContent = '0';
+            document.getElementById('pointLabelInput').value = '';
+            document.getElementById('pointLabelInput').placeholder = 'P1 — laissez vide pour automatique';
+            document.getElementById('pointsLabelsList').style.display = 'none';
+            document.getElementById('pointsLabelsList').innerHTML = '';
         }
         
         function updatePointsDisplay() {
             const count = currentPointsPath.length;
             document.getElementById('pointsCounter').textContent = count;
             document.getElementById('pointsTotal').textContent = count;
+            document.getElementById('pointLabelInput').placeholder = `P${count + 1} — laissez vide pour automatique`;
             
             // Mettre à jour la polyline
             if (pointsPolyline) {
@@ -2356,15 +2435,31 @@
             if (count >= 2) {
                 pointsPolyline = L.polyline(currentPointsPath, {
                     color: '#eab308',
-                    weight: 4,
+                    weight: mapLineWeight(getDefaultLineweight()),
                     opacity: 0.9
                 }).addTo(pointsLayer);
             }
+            
+            const list = document.getElementById('pointsLabelsList');
+            if (count === 0) {
+                list.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+            list.style.display = 'block';
+            list.innerHTML = currentPointLabels.map((label, i) => `
+                <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 10px; color: #94a3b8; width: 22px;">#${i + 1}</span>
+                    <input type="text" value="${escapeHtml(label)}" data-point-idx="${i}"
+                        style="flex: 1; padding: 4px 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 11px;">
+                </div>
+            `).join('');
         }
         
         document.getElementById('startPointsMode')?.addEventListener('click', function() {
             isPointsMode = true;
             currentPointsPath = [];
+            currentPointLabels = [];
             pointsMarkers = [];
             map.getContainer().style.cursor = 'crosshair';
             this.style.display = 'none';
@@ -2379,10 +2474,19 @@
         document.getElementById('undoLastPoint')?.addEventListener('click', function() {
             if (currentPointsPath.length > 0) {
                 currentPointsPath.pop();
+                currentPointLabels.pop();
                 const lastMarker = pointsMarkers.pop();
                 if (lastMarker) pointsLayer.removeLayer(lastMarker);
                 updatePointsDisplay();
             }
+        });
+        
+        document.getElementById('pointsLabelsList')?.addEventListener('input', function(e) {
+            const idx = e.target.dataset.pointIdx;
+            if (idx === undefined) return;
+            currentPointLabels[idx] = e.target.value.trim() || `P${Number(idx) + 1}`;
+            const marker = pointsMarkers[idx];
+            if (marker && marker.getTooltip()) marker.setTooltipContent(currentPointLabels[idx]);
         });
         
         document.getElementById('finishPointsMode')?.addEventListener('click', async function() {
@@ -2393,12 +2497,17 @@
             
             const description = document.getElementById('pointsDesc').value.trim() || 'Tracé points';
             const ml = parseInt(document.getElementById('pointsML').value) || 0;
+            const pointLabels = currentPointsPath.map((p, i) => ({
+                lat: p.lat,
+                lon: p.lng,
+                label: (currentPointLabels[i] || '').trim() || `P${i + 1}`
+            }));
             
             // Ajouter comme tronçon
             const debut = currentPointsPath[0];
             const arrivee = currentPointsPath[currentPointsPath.length - 1];
             
-            await addTronconWithPath(debut.lat, debut.lng, arrivee.lat, arrivee.lng, description, ml, currentPointsPath);
+            await addTronconWithPath(debut.lat, debut.lng, arrivee.lat, arrivee.lng, description, ml, currentPointsPath, { pointLabels });
             
             showToast(`Tracé ajouté (${currentPointsPath.length} points)`, 'success');
             document.getElementById('pointsDesc').value = '';
@@ -2410,7 +2519,11 @@
         map.on('click', function(e) {
             if (!isPointsMode) return;
             
+            const input = document.getElementById('pointLabelInput');
+            const label = (input.value || '').trim() || `P${currentPointsPath.length + 1}`;
             currentPointsPath.push(e.latlng);
+            currentPointLabels.push(label);
+            input.value = '';
             
             // Ajouter un marqueur
             const marker = L.circleMarker(e.latlng, {
@@ -2422,7 +2535,7 @@
                 fillOpacity: 1
             }).addTo(pointsLayer);
             
-            marker.bindTooltip(`P${currentPointsPath.length}`, { permanent: true, direction: 'top', className: 'point-label' });
+            marker.bindTooltip(label, { permanent: true, direction: 'top', className: 'point-label' });
             pointsMarkers.push(marker);
             
             updatePointsDisplay();
@@ -2440,11 +2553,12 @@
             });
         }
 
-        // options: { color, suivi: 'trace' | 'route' | 'route_foot', waypoints }
+        // options: { color, suivi, waypoints, pointLabels, lineweight }
         async function addTronconWithPath(debutLat, debutLon, arriveeLat, arriveeLon, description, ml, path, options = {}) {
             const id = ++tronconIdCounter;
             const color = options.color || TRONCON_COLORS[(id - 1) % TRONCON_COLORS.length];
             const suivi = options.suivi || document.getElementById('tronconSuivi').value;
+            const lineweight = options.lineweight || getDefaultLineweight();
             
             path = path.map(p => L.latLng(p.lat, p.lng));
             
@@ -2478,6 +2592,8 @@
                 ml: ml,
                 color,
                 suivi,
+                lineweight,
+                pointLabels: options.pointLabels || [],
                 path: path.map(p => ({ lat: p.lat, lng: p.lng })) // Sauvegarder le chemin complet
             };
             
@@ -2487,7 +2603,7 @@
             const formatCoord = (val) => Math.round(val).toLocaleString('fr-FR');
             const polyline = L.polyline(path, {
                 color: color,
-                weight: 4,
+                weight: mapLineWeight(lineweight),
                 opacity: 0.9
             });
             polyline.tronconId = id;
@@ -2541,6 +2657,13 @@
                 label.isTronconLabel = true;
                 tronconsLayerGroup.addLayer(label);
             }
+            
+            (troncon.pointLabels || []).forEach(p => {
+                const marker = L.marker([p.lat, p.lon], { icon: pointLabelIcon(p.label) });
+                marker.tronconId = id;
+                marker.isPointLabel = true;
+                tronconsLayerGroup.addLayer(marker);
+            });
             
             // Points de relevé
             const pointDebut = {
@@ -3356,12 +3479,15 @@
                 // Préparer les données des tronçons câbles
                 let tronconsData = [];
                 if (state.troncons && state.troncons.length > 0) {
+                    const exportLw = parseFloat(document.getElementById('exportLineweight').value);
                     tronconsData = state.troncons.map(t => ({
                         debut: { lat: t.debut.lat, lon: t.debut.lon, x: t.debut.x, y: t.debut.y },
                         arrivee: { lat: t.arrivee.lat, lon: t.arrivee.lon, x: t.arrivee.x, y: t.arrivee.y },
                         description: t.description,
                         ml: t.ml,
                         color: t.color,
+                        lineweight: Number.isFinite(exportLw) ? exportLw : (t.lineweight || 0.35),
+                        point_labels: (t.pointLabels || []).map(p => ({ lat: p.lat, lon: p.lon, label: p.label })),
                         path: t.path.map(p => ({ lat: p.lat, lon: p.lng }))
                     }));
                 }
