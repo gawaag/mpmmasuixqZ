@@ -22,6 +22,8 @@ import hashlib
 from functools import wraps
 from datetime import datetime
 import math
+import threading
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 app = Flask(__name__)
@@ -2125,7 +2127,7 @@ def create_dxf_with_template(data, filepath, cartouche):
 
 
 @app.route('/api/download-with-template', methods=['POST'])
-def download_with_template(payload=None, before_save=None):
+def download_with_template(payload=None, before_save=None, as_bytes=False):
     """Export avec maquette professionnelle - coordonnées Lambert directes"""
     try:
         start_time = time.time()
@@ -2534,6 +2536,9 @@ Par: Hyperysco-Map Plus
             print(f"MAP PLUS TERMINÉ en {duration:.1f}s")
             print(f"{'='*50}\n")
             
+            if as_bytes:
+                return zip_data
+            
             return send_file(
                 BytesIO(zip_data),
                 mimetype='application/zip',
@@ -2693,11 +2698,16 @@ def add_mapplus3_troncons(doc, troncons, transformer_lambert):
     return count
 
 
-@app.route('/api/download-mapplus3', methods=['POST'])
-def download_mapplus3():
-    """Export Map Plus 3 : maquette Map Plus + tracés avec chemin complet et couleurs"""
+# L'export tourne dans un thread : une requête longue serait tuée par le --timeout de gunicorn.
+# Les jobs sont en mémoire, ce qui suppose un seul worker gunicorn (--workers 1).
+EXPORT_JOBS = {}
+EXPORT_JOBS_LOCK = threading.Lock()
+EXPORT_JOB_TTL = 1800
+
+
+def run_mapplus3_export(job_id, data):
+    job = EXPORT_JOBS[job_id]
     try:
-        data = request.get_json() or {}
         troncons = data.get('troncons', [])
         transformer_lambert = get_lambert_transformer()
 
@@ -2706,11 +2716,59 @@ def download_mapplus3():
                 print(f"\n[MAP PLUS 3] Ajout de {len(troncons)} tracé(s)")
                 add_mapplus3_troncons(doc, troncons, transformer_lambert)
 
-        return download_with_template(dict(data, troncons=[]), before_save=add_traces)
-
+        with app.app_context():
+            result = download_with_template(dict(data, troncons=[]), before_save=add_traces, as_bytes=True)
+            if isinstance(result, tuple):
+                job['error'] = result[0].get_json().get('error', 'Erreur export')
+                job['status'] = 'error'
+                return
+        job['data'] = result
+        job['status'] = 'done'
     except Exception as e:
         traceback.print_exc()
-        return jsonify({'error': f"{type(e).__name__}: {e}"}), 500
+        job['error'] = f"{type(e).__name__}: {e}"
+        job['status'] = 'error'
+
+
+@app.route('/api/mapplus3/export', methods=['POST'])
+def start_mapplus3_export():
+    """Lance l'export Map Plus 3 en arrière-plan et renvoie l'identifiant du job"""
+    data = request.get_json() or {}
+    job_id = uuid.uuid4().hex
+    now = time.time()
+    with EXPORT_JOBS_LOCK:
+        for old_id in [k for k, j in EXPORT_JOBS.items() if now - j['created'] > EXPORT_JOB_TTL]:
+            del EXPORT_JOBS[old_id]
+        EXPORT_JOBS[job_id] = {'status': 'running', 'created': now, 'data': None, 'error': None}
+    threading.Thread(target=run_mapplus3_export, args=(job_id, data), daemon=True).start()
+    return jsonify({'job_id': job_id})
+
+
+@app.route('/api/mapplus3/export/<job_id>', methods=['GET'])
+def mapplus3_export_status(job_id):
+    job = EXPORT_JOBS.get(job_id)
+    if not job:
+        return jsonify({'status': 'error', 'error': "Export introuvable (le serveur a peut-être redémarré), relancez l'export"}), 404
+    return jsonify({
+        'status': job['status'],
+        'error': job['error'],
+        'elapsed': round(time.time() - job['created'])
+    })
+
+
+@app.route('/api/mapplus3/export/<job_id>/download', methods=['GET'])
+def mapplus3_export_download(job_id):
+    with EXPORT_JOBS_LOCK:
+        job = EXPORT_JOBS.get(job_id)
+        if not job or job['status'] != 'done':
+            return jsonify({'error': 'Export non disponible'}), 404
+        del EXPORT_JOBS[job_id]
+    return send_file(
+        BytesIO(job['data']),
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name='hyperysco_maquette_plus3.zip'
+    )
 
 
 # ============================================================

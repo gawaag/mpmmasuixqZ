@@ -3234,7 +3234,21 @@
                     }));
                 }
                 
-                const response = await fetch('/api/download-mapplus3', {
+                async function checkResponse(response) {
+                    if (response.ok) return response;
+                    const text = await response.text();
+                    let message = `Erreur serveur ${response.status}`;
+                    try {
+                        message += ' : ' + (JSON.parse(text).error || '');
+                    } catch (e) {
+                        message += ' (réponse non JSON, voir console)';
+                        console.error('Réponse export:', text.substring(0, 2000));
+                    }
+                    throw new Error(message);
+                }
+                
+                // L'export tourne en arrière-plan sur le serveur ; on interroge son état
+                const startResponse = await checkResponse(await fetch('/api/mapplus3/export', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3248,21 +3262,21 @@
                         grid_mode: document.getElementById('gridMode').value,
                         troncons: tronconsData
                     })
-                });
+                }));
+                const { job_id } = await startResponse.json();
                 
-                if (!response.ok) {
-                    const text = await response.text();
-                    let message = `Erreur serveur ${response.status}`;
-                    try {
-                        message += ' : ' + (JSON.parse(text).error || '');
-                    } catch (e) {
-                        message += ' (réponse non JSON, voir console)';
-                        console.error('Réponse export:', text.substring(0, 2000));
-                    }
-                    throw new Error(message);
-                }
+                let job;
+                do {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    job = await (await checkResponse(await fetch(`/api/mapplus3/export/${job_id}`))).json();
+                    document.getElementById('loadingSub').textContent =
+                        `Téléchargement des données OSM et création du DXF... ${job.elapsed || 0} s`;
+                } while (job.status === 'running');
+                
+                if (job.status === 'error') throw new Error(job.error || 'Erreur export');
                 
                 // Télécharger
+                const response = await checkResponse(await fetch(`/api/mapplus3/export/${job_id}/download`));
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
