@@ -1338,9 +1338,9 @@
                             <input type="checkbox">
                             🏢 Bâtiments
                         </div>
-                        <div class="layer-item" data-layer="contours">
+                        <div class="layer-item selected" data-layer="contours">
                             <span class="layer-check"></span>
-                            <input type="checkbox">
+                            <input type="checkbox" checked>
                             📏 Contours
                         </div>
                         <div class="layer-item" data-layer="water">
@@ -1348,9 +1348,9 @@
                             <input type="checkbox">
                             💧 Eau
                         </div>
-                        <div class="layer-item" data-layer="places">
+                        <div class="layer-item selected" data-layer="places">
                             <span class="layer-check"></span>
-                            <input type="checkbox">
+                            <input type="checkbox" checked>
                             🏘️ Quartiers
                         </div>
                     </div>
@@ -1375,8 +1375,8 @@
                     <div style="margin-bottom: 10px;">
                         <label style="font-size: 11px; color: #94a3b8;">🎯 Mode de placement</label>
                         <select id="gridMode" style="width: 100%; margin-top: 4px; padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 12px;">
-                            <option value="full" selected>Grille complète (toute la zone)</option>
-                            <option value="extremities">Extrémités seulement (coins + bords)</option>
+                            <option value="full">Grille complète (toute la zone)</option>
+                            <option value="extremities" selected>Extrémités seulement (coins + bords)</option>
                             <option value="corners">4 coins uniquement</option>
                         </select>
                     </div>
@@ -1385,12 +1385,12 @@
                         <div class="grid-option-group">
                             <label>📏 Espacement graduations</label>
                             <select id="gridSpacing">
-                                <option value="auto" selected>Automatique</option>
+                                <option value="auto">Automatique</option>
                                 <option value="25">25 m</option>
                                 <option value="50">50 m</option>
                                 <option value="100">100 m</option>
                                 <option value="200">200 m</option>
-                                <option value="500">500 m</option>
+                                <option value="500" selected>500 m</option>
                                 <option value="1000">1 km</option>
                             </select>
                         </div>
@@ -1718,14 +1718,14 @@
     <script>
         // État de l'application
         const state = {
-            layers: ['roads'],
+            layers: ['roads', 'contours', 'places'],
             bbox: null,
             contourInterval: 10,
             lambertCenter: { x: 0, y: 0 },
             releveMode: false,
             relevePoints: [],
             searchMarker: null,  // Étoile de repérage
-            gridSpacing: 'auto', // Espacement graduations (auto, 50, 100, 200, 500)
+            gridSpacing: '500',  // Espacement graduations (auto, 50, 100, 200, 500)
             gridOffset: 0,       // Offset vertical des croix
             showGridPreview: true // Afficher prévisualisation des croix
         };
@@ -1881,6 +1881,138 @@
                 total += map.distance(path[i - 1], path[i]);
             }
             return total;
+        }
+
+        // ===== Données OSM et altitudes téléchargées par le navigateur =====
+        // Render partage son IP avec d'autres applis et Overpass la refuse souvent : le navigateur utilise la connexion de l'utilisateur.
+        const BROWSER_OVERPASS_SERVERS = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+            'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+        ];
+        const OSM_LAYER_NAMES = { roads: 'routes', buildings: 'bâtiments', water: 'eau', landuse: 'occupation du sol', places: 'quartiers' };
+        const KEPT_TAGS = ['name', 'name:fr', 'name:ar', 'highway', 'place'];
+
+        function overpassQuery(layer, bbox) {
+            const b = `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`;
+            const bodies = {
+                roads: `way["highway"]["highway"!~"path|footway|cycleway|steps"](${b});`,
+                buildings: `way["building"](${b});`,
+                water: `way["natural"="water"](${b});way["waterway"](${b});`,
+                landuse: `way["landuse"](${b});`,
+                places: `node["place"~"suburb|neighbourhood|quarter|locality|hamlet|village|town"](${b});node["name"]["place"](${b});way["place"](${b});`
+            };
+            if (!bodies[layer]) return null;
+            const out = layer === 'places' ? 'out body geom center;' : 'out body geom;';
+            return `[out:json][timeout:60];(${bodies[layer]});${out}`;
+        }
+
+        function compactOsmElements(layer, elements) {
+            return elements
+                .filter(el => layer === 'places' || el.type === 'way')
+                .map(el => {
+                    const tags = {};
+                    KEPT_TAGS.forEach(k => { if (el.tags && el.tags[k]) tags[k] = el.tags[k]; });
+                    const compact = { type: el.type, tags };
+                    if (el.geometry) compact.geometry = el.geometry.map(p => ({ lat: p.lat, lon: p.lon }));
+                    if (el.lat !== undefined) { compact.lat = el.lat; compact.lon = el.lon; }
+                    if (el.center) compact.center = el.center;
+                    return compact;
+                });
+        }
+
+        async function fetchOverpassInBrowser(query) {
+            for (const server of BROWSER_OVERPASS_SERVERS) {
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const response = await fetch(server, {
+                            method: 'POST',
+                            body: new URLSearchParams({ data: query }),
+                            signal: AbortSignal.timeout(90000)
+                        });
+                        if (response.ok) return (await response.json()).elements || [];
+                        console.warn(`Overpass ${server} -> HTTP ${response.status}`);
+                        if (response.status !== 429 && response.status !== 504) break;
+                    } catch (err) {
+                        console.warn(`Overpass ${server} -> ${err.message}`);
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 3000 * (attempt + 1)));
+                }
+            }
+            return null;
+        }
+
+        // Renvoie { couche: éléments } ; une couche en échec est absente et sera tentée par le serveur
+        async function fetchOsmInBrowser(bbox, layers, onProgress) {
+            const result = {};
+            const queue = layers.filter(l => overpassQuery(l, bbox));
+            let done = 0;
+            async function worker() {
+                while (queue.length) {
+                    const layer = queue.shift();
+                    const elements = await fetchOverpassInBrowser(overpassQuery(layer, bbox));
+                    if (elements) result[layer] = compactOsmElements(layer, elements);
+                    else console.warn(`Couche ${layer} non téléchargée par le navigateur`);
+                    onProgress(`Données OpenStreetMap : ${++done}/${layers.length} (${OSM_LAYER_NAMES[layer] || layer})`);
+                }
+            }
+            await Promise.all([worker(), worker()]);
+            return result;
+        }
+
+        // Grille d'altitudes identique à get_elevation_data côté serveur (lignes = latitudes)
+        async function fetchElevationGridInBrowser(bbox, resolution = 40) {
+            const [south, west, north, east] = bbox;
+            const linspace = (a, b, n) => Array.from({ length: n }, (_, i) => a + (b - a) * i / (n - 1));
+            const lats = linspace(south, north, resolution);
+            const lons = linspace(west, east, resolution);
+            const points = [];
+            lats.forEach(lat => lons.forEach(lon => points.push([lat, lon])));
+            const toGrid = elevations => {
+                const grid = [];
+                for (let r = 0; r < resolution; r++) grid.push(elevations.slice(r * resolution, (r + 1) * resolution));
+                return grid;
+            };
+            
+            try {
+                const response = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ locations: points.map(([latitude, longitude]) => ({ latitude, longitude })) }),
+                    signal: AbortSignal.timeout(60000)
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const results = (await response.json()).results;
+                if (results.length !== points.length) throw new Error('réponse incomplète');
+                return toGrid(results.map(r => r.elevation));
+            } catch (err) {
+                console.warn('Open-Elevation indisponible:', err.message);
+            }
+            
+            try {
+                const elevations = [];
+                for (let i = 0; i < points.length; i += 100) {
+                    const batch = points.slice(i, i + 100);
+                    const params = new URLSearchParams({
+                        latitude: batch.map(p => p[0].toFixed(6)).join(','),
+                        longitude: batch.map(p => p[1].toFixed(6)).join(',')
+                    });
+                    let response;
+                    for (let attempt = 0; attempt < 4; attempt++) {
+                        response = await fetch(`https://api.open-meteo.com/v1/elevation?${params}`, { signal: AbortSignal.timeout(20000) });
+                        if (response.status !== 429) break;
+                        await new Promise(resolve => setTimeout(resolve, 5000 * (attempt + 1)));
+                    }
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    elevations.push(...(await response.json()).elevation);
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                return toGrid(elevations);
+            } catch (err) {
+                console.warn('Altitudes navigateur indisponibles, le serveur essaiera:', err.message);
+                return null;
+            }
         }
 
         // Itinéraire routier entre les points (OSRM via le serveur)
@@ -3247,6 +3379,18 @@
                     throw new Error(message);
                 }
                 
+                const loadingSub = document.getElementById('loadingSub');
+                const osmElements = await fetchOsmInBrowser(
+                    state.bbox,
+                    state.layers.filter(l => l !== 'contours'),
+                    message => { loadingSub.textContent = message; }
+                );
+                let elevationGrid = null;
+                if (state.layers.includes('contours')) {
+                    loadingSub.textContent = 'Altitudes pour les courbes de niveau...';
+                    elevationGrid = await fetchElevationGridInBrowser(state.bbox);
+                }
+                
                 // L'export tourne en arrière-plan sur le serveur ; on interroge son état
                 const startResponse = await checkResponse(await fetch('/api/mapplus3/export', {
                     method: 'POST',
@@ -3260,7 +3404,9 @@
                         grid_spacing: document.getElementById('gridSpacing').value,
                         grid_offset: parseInt(document.getElementById('gridOffset').value) || 0,
                         grid_mode: document.getElementById('gridMode').value,
-                        troncons: tronconsData
+                        troncons: tronconsData,
+                        osm_elements: osmElements,
+                        elevation_grid: elevationGrid
                     })
                 }));
                 const { job_id } = await startResponse.json();
@@ -3269,8 +3415,7 @@
                 do {
                     await new Promise(resolve => setTimeout(resolve, 3000));
                     job = await (await checkResponse(await fetch(`/api/mapplus3/export/${job_id}`))).json();
-                    document.getElementById('loadingSub').textContent =
-                        `Téléchargement des données OSM et création du DXF... ${job.elapsed || 0} s`;
+                    loadingSub.textContent = `Création du DXF sur le serveur... ${job.elapsed || 0} s`;
                 } while (job.status === 'running');
                 
                 if (job.status === 'error') throw new Error(job.error || 'Erreur export');
@@ -3281,7 +3426,7 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'hyperysco_maquette_plus3.zip';
+                a.download = 'plan_avec_maquette.dxf';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

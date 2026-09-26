@@ -451,6 +451,27 @@ def get_elevation_data(bbox, resolution=40):
     except:
         pass
     
+    # Secours : Open-Meteo (100 points par requête)
+    try:
+        elevations = []
+        for i in range(0, len(points), 100):
+            batch = points[i:i + 100]
+            response = requests.get(
+                'https://api.open-meteo.com/v1/elevation',
+                params={
+                    'latitude': ','.join(f"{p['latitude']:.6f}" for p in batch),
+                    'longitude': ','.join(f"{p['longitude']:.6f}" for p in batch),
+                },
+                headers=OVERPASS_HEADERS,
+                timeout=20
+            )
+            response.raise_for_status()
+            elevations.extend(response.json()['elevation'])
+        grid = np.array(elevations, dtype=float).reshape((resolution, resolution))
+        return grid, lats, lons, 'real'
+    except Exception as e:
+        print(f"  Open-Meteo élévation: {e}")
+    
     # Fallback: terrain simulé
     print("  ⚠ Utilisation terrain simulé")
     return generate_simulated_terrain(resolution), lats, lons, 'simulated'
@@ -2173,16 +2194,23 @@ def download_with_template(payload=None, before_save=None, as_bytes=False):
         
         # ===== DONNÉES OSM =====
         # Téléchargement 2 par 2 avec un budget de temps : gunicorn tue la requête après 180 s
+        # Couches déjà téléchargées par le navigateur (Map Plus 3) : l'IP partagée de Render est souvent refusée par Overpass
+        prefetched_osm = data.get('osm_elements') or {}
         osm_layers = [l for l in layers if l != 'contours']
         osm_deadline = start_time + OSM_TIME_BUDGET
         with ThreadPoolExecutor(max_workers=2) as pool:
-            osm_futures = {l: pool.submit(fetch_osm_data, bbox, l, osm_deadline) for l in osm_layers}
-        print(f"\n[OSM] Téléchargement terminé en {time.time() - start_time:.1f}s")
+            osm_futures = {l: pool.submit(fetch_osm_data, bbox, l, osm_deadline)
+                           for l in osm_layers if l not in prefetched_osm}
+        print(f"\n[OSM] Téléchargement terminé en {time.time() - start_time:.1f}s "
+              f"(fournies par le navigateur: {', '.join(prefetched_osm) or 'aucune'})")
         
         for layer_name in osm_layers:
             print(f"\n[OSM] {layer_name}...")
             try:
-                elements = osm_futures[layer_name].result()
+                if layer_name in prefetched_osm:
+                    elements = parse_osm_elements(prefetched_osm[layer_name], layer_name)
+                else:
+                    elements = osm_futures[layer_name].result()
                 
                 # Convertir directement en LAMBERT (pas en local!)
                 lambert_elements = []
@@ -2228,7 +2256,17 @@ def download_with_template(payload=None, before_save=None, as_bytes=False):
                 matplotlib.use('Agg')
                 import matplotlib.pyplot as plt
                 
-                elevation_grid, lats, lons, source = get_elevation_data(bbox, resolution=40)
+                provided_grid = data.get('elevation_grid')
+                if provided_grid:
+                    elevation_grid = np.array(provided_grid, dtype=float)
+                    lats = np.linspace(south, north, elevation_grid.shape[0])
+                    lons = np.linspace(west, east, elevation_grid.shape[1])
+                    source = 'navigateur'
+                else:
+                    elevation_grid, lats, lons, source = get_elevation_data(bbox, resolution=40)
+                print(f"  Altitudes: {elevation_grid.min():.0f}m - {elevation_grid.max():.0f}m ({source})")
+                if source == 'simulated':
+                    raise RuntimeError("altitudes réelles indisponibles, courbes non générées (pas de terrain simulé)")
                 
                 z_min = elevation_grid.min()
                 z_max = elevation_grid.max()
@@ -2722,7 +2760,8 @@ def run_mapplus3_export(job_id, data):
                 job['error'] = result[0].get_json().get('error', 'Erreur export')
                 job['status'] = 'error'
                 return
-        job['data'] = result
+        with zipfile.ZipFile(BytesIO(result)) as zf:
+            job['data'] = zf.read('plan_avec_maquette.dxf')
         job['status'] = 'done'
     except Exception as e:
         traceback.print_exc()
@@ -2765,9 +2804,9 @@ def mapplus3_export_download(job_id):
         del EXPORT_JOBS[job_id]
     return send_file(
         BytesIO(job['data']),
-        mimetype='application/zip',
+        mimetype='application/dxf',
         as_attachment=True,
-        download_name='hyperysco_maquette_plus3.zip'
+        download_name='plan_avec_maquette.dxf'
     )
 
 
