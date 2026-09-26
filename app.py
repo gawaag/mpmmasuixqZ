@@ -22,6 +22,7 @@ import hashlib
 from functools import wraps
 from datetime import datetime
 import math
+from concurrent.futures import ThreadPoolExecutor
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'hyperysco-map-secret-key-2026-ELHCH-ACHACH')
@@ -120,6 +121,9 @@ OVERPASS_SERVERS = [
     "https://overpass.kumi.systems/api/interpreter",
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
+
+# Temps max (s) pour les couches OSM de l'export maquette, sous le --timeout 180 de gunicorn
+OSM_TIME_BUDGET = 100
 
 # Les serveurs Overpass rejettent (406/429) les requêtes sans User-Agent identifiable
 OVERPASS_HEADERS = {
@@ -244,7 +248,7 @@ def generate_lambert_crosses(bbox, transformer_local, transformer_lambert, spaci
 # RÉCUPÉRATION DONNÉES OSM
 # ============================================================
 
-def fetch_osm_data(bbox, layer_type):
+def fetch_osm_data(bbox, layer_type, deadline=None):
     """
     Récupère les données OSM pour une couche spécifique.
     Retourne une liste de dictionnaires avec geometry et properties.
@@ -305,15 +309,24 @@ def fetch_osm_data(bbox, layer_type):
     for server in OVERPASS_SERVERS:
         try:
             for attempt in range(3):
+                timeout = 90
+                if deadline is not None:
+                    timeout = min(timeout, deadline - time.time())
+                    if timeout < 5:
+                        print(f"    Overpass: temps écoulé, couche {layer_type} ignorée")
+                        return []
                 response = requests.post(
                     server,
                     data={'data': query},
                     headers=OVERPASS_HEADERS,
-                    timeout=90
+                    timeout=timeout
                 )
                 if response.status_code != 429:
                     break
-                time.sleep(3 * (attempt + 1))
+                pause = 3 * (attempt + 1)
+                if deadline is not None and time.time() + pause > deadline:
+                    break
+                time.sleep(pause)
             if response.status_code == 200:
                 data = response.json()
                 return parse_osm_elements(data.get('elements', []), layer_type)
@@ -2157,13 +2170,17 @@ def download_with_template(payload=None, before_save=None):
         }
         
         # ===== DONNÉES OSM =====
-        for layer_name in layers:
-            if layer_name == 'contours':
-                continue
-            
+        # Téléchargement 2 par 2 avec un budget de temps : gunicorn tue la requête après 180 s
+        osm_layers = [l for l in layers if l != 'contours']
+        osm_deadline = start_time + OSM_TIME_BUDGET
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            osm_futures = {l: pool.submit(fetch_osm_data, bbox, l, osm_deadline) for l in osm_layers}
+        print(f"\n[OSM] Téléchargement terminé en {time.time() - start_time:.1f}s")
+        
+        for layer_name in osm_layers:
             print(f"\n[OSM] {layer_name}...")
             try:
-                elements = fetch_osm_data(bbox, layer_name)
+                elements = osm_futures[layer_name].result()
                 
                 # Convertir directement en LAMBERT (pas en local!)
                 lambert_elements = []
@@ -2204,12 +2221,12 @@ def download_with_template(payload=None, before_save=None):
         if 'contours' in layers:
             print("\n[CONTOURS] Génération...")
             try:
-                elevation_grid, lats, lons, source = get_elevation_data(bbox, resolution=40)
-                
-                # Générer les contours et convertir en Lambert
+                # Importer avant de télécharger les altitudes, pour ne pas attendre l'API si matplotlib manque
                 import matplotlib
                 matplotlib.use('Agg')
                 import matplotlib.pyplot as plt
+                
+                elevation_grid, lats, lons, source = get_elevation_data(bbox, resolution=40)
                 
                 z_min = elevation_grid.min()
                 z_max = elevation_grid.max()
